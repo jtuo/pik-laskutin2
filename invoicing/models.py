@@ -86,6 +86,7 @@ class AccountEntry(models.Model):
         help_text="For mapping to external accounting system"
     )
     created_at = models.DateTimeField(default=timezone.now)
+    metadata = models.JSONField(null=True, blank=True)
 
     class Meta:
         db_table = 'account_entries'
@@ -161,7 +162,7 @@ class AccountEntryTag(models.Model):
                 name='unique_entry_tag'
             )
         ]
-        
+
         db_table = 'account_entry_tags'
 
     def __str__(self):
