@@ -31,6 +31,7 @@ class Command(BaseCommand):
                     try:
                     
                         # Check if member already exists
+                        # This checks for the PIK-viite field only
                         member, member_created = Member.objects.get_or_create(
                             id=row['PIK-viite'],
                             defaults={
@@ -60,10 +61,6 @@ class Command(BaseCommand):
                                 member.save()
 
                             count += 1
-                            logger.info(
-                                f"Added new member: {member.name} (ID: {member.id}) "
-                                f"{'with email ' + member.email if member.email else ''}"
-                            )
                         else:
                             skipped += 1
 
@@ -78,14 +75,18 @@ class Command(BaseCommand):
 
                         if account_created:
                             accounts_created += 1
-                            logger.info(f"Created invoicing account for member {member.id}")
+                            
+                        if member_created or account_created:
+                            status = []
+                            if member_created:
+                                status.append("Added new member")
+                            if account_created:
+                                status.append("Created new account")
+                            logger.info(f"{' & '.join(status)} for {member.name} (ID: {row['PIK-viite']})")
 
                     except Exception as e:
                         error_msg = f"Error in row {reader.line_num}: {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
 
-        logger.info(
-            f'Successfully imported {count} members (skipped {skipped} existing) '
-            f'and created {accounts_created} accounts'
-        )
+        logger.info(f'Processed {count + skipped} members: {count} new, {skipped} existing, {accounts_created} new accounts created')
