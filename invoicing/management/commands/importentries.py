@@ -89,12 +89,9 @@ class Command(BaseCommand):
         except FileNotFoundError:
             logger.exception(f"File not found: {filename}")
             return
-        
-        if failed:
-            logger.error(f"Import completed with errors. Imported: {count}, Failed: {failed}")
-            if not options['force']:
-                logger.error("Rolling back transaction")
 
-        logger.info(
-            f"Entry import completed. Imported: {count}, Failed: {failed}, Duplicates: {duplicates}"
-        )
+        logger.info(f"Entry import completed. Imported: {count}, Failed: {failed}, Duplicates: {duplicates}")
+
+        if failed:
+            if not options['force']:
+                logger.error(f"Rolling back transaction due to {failed} failed entries")

@@ -192,13 +192,13 @@ class Command(BaseCommand):
 
             logger.info(f"In file {filename}: Imported: {successes}, Failed: {failures}, Duplicates: {duplicates}")
         
+        if total_failures or total_duplicates:
+            logger.warning(f"Flight import completed. Imported: {total_successes}, Failed: {total_failures}, Duplicates: {total_successes}")
+        else:
+            logger.info(f"Flight import completed. Imported: {total_successes}, Failed: {total_failures}, Duplicates: {total_successes}")
+        
         if total_failures:
             logger.warning(f"Encountered {total_failures} failures during processing")
             if not options['force']:
                 transaction.set_rollback(True)
                 logger.error("Rolling back transaction due to errors")
-        
-        if total_failures or total_duplicates:
-            logger.warning(f"Flight import completed. Imported: {total_successes}, Failed: {total_failures}, Duplicates: {total_successes}")
-        else:
-            logger.info(f"Flight import completed. Imported: {total_successes}, Failed: {total_failures}, Duplicates: {total_successes}")
