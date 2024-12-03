@@ -190,7 +190,7 @@ class Command(BaseCommand):
             total_failures += failures
             total_duplicates += duplicates
 
-            logger.info(f"Imported {successes} flights, {failures} failures, {duplicates} duplicates")
+            logger.info(f"In file {filename}: Imported: {successes}, Failed: {failures}, Duplicates: {duplicates}")
         
         if total_failures:
             logger.warning(f"Encountered {total_failures} failures during processing")
@@ -199,6 +199,6 @@ class Command(BaseCommand):
                 logger.error("Rolling back transaction due to errors")
         
         if total_failures or total_duplicates:
-            logger.warning(f"Processing complete: imported {total_successes} flights, skipped {total_duplicates} duplicates, with {total_failures} failures")
+            logger.warning(f"Flight import completed. Imported: {total_successes}, Failed: {total_failures}, Duplicates: {total_successes}")
         else:
-            logger.info(f"Processing complete: imported {total_successes} flights, skipped {total_duplicates} duplicates, with {total_failures} failures")
+            logger.info(f"Flight import completed. Imported: {total_successes}, Failed: {total_failures}, Duplicates: {total_successes}")
