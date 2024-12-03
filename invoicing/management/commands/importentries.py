@@ -12,11 +12,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('filename', type=str, help='Path to the CSV file')
+        parser.add_argument('--force', action='store_true', help='Force import even if some entries fail, does not import duplicates')
+        parser.add_argument('--force-duplicates', action='store_true', help='Force import even if some entries are duplicates')
 
+    @transaction.atomic
     def handle(self, *args, **options):
         filename = options['filename']
         count = 0
         failed = 0
+        duplicates = 0
 
         self.stdout.write(f"Importing entries from {filename}")
 
@@ -29,56 +33,68 @@ class Command(BaseCommand):
                 if missing_columns:
                     raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
 
-                # Use transaction.atomic to ensure database consistency
-                with transaction.atomic():
-                    for row in reader:
+                for row in reader:
+                    try:
+                        # Parse date and make it timezone-aware
                         try:
-                            # Parse date and make it timezone-aware
-                            try:
-                                naive_datetime = datetime.strptime(row['Tapahtumapäivä'], '%Y-%m-%d')
-                                date = timezone.make_aware(naive_datetime)
-                            except ValueError:
-                                raise ValueError(
-                                    f"Invalid date format: {row['Tapahtumapäivä']}. Use YYYY-MM-DD"
-                                )
+                            naive_datetime = datetime.strptime(row['Tapahtumapäivä'], '%Y-%m-%d')
+                            date = timezone.make_aware(naive_datetime)
+                        except ValueError:
+                            raise ValueError(
+                                f"Invalid date format: {row['Tapahtumapäivä']}. Use YYYY-MM-DD"
+                            )
 
-                            # Find account by reference number
-                            try:
-                                account = Account.objects.get(id=row['Maksajan viitenumero'])
-                            except Account.DoesNotExist:
-                                logger.warning(
-                                    f"Account with reference ID {row['Maksajan viitenumero']} not found"
-                                )
-                                failed += 1
+                        # Find account by reference number
+                        try:
+                            account = Account.objects.get(id=row['Maksajan viitenumero'])
+                        except Account.DoesNotExist:
+                            raise ValueError(
+                                f"Account with reference ID {row['Maksajan viitenumero']} not found"
+                            )
+
+                        # Parse amount
+                        try:
+                            amount = Decimal(row['Summa'].replace(',', '.'))
+                        except (ValueError, decimal_InvalidOperation):
+                            raise ValueError(f"Invalid amount format: {row['Summa']}")
+                        
+                        # Check for duplicates
+                        if AccountEntry.objects.filter(
+                            account=account,
+                            date=date,
+                            amount=amount,
+                            description=row['Selite'],
+                            ledger_account_id=row['Tili']
+                        ).exists():
+                            duplicates += 1
+                            if not options['force_duplicates']:
+                                logger.warning(f"Skipping duplicate entry: {row}")
                                 continue
 
-                            # Parse amount
-                            try:
-                                amount = Decimal(row['Summa'].replace(',', '.'))
-                            except (ValueError, decimal_InvalidOperation):
-                                raise ValueError(f"Invalid amount format: {row['Summa']}")
+                        # Create new AccountEntry
+                        AccountEntry.objects.create(
+                            account=account,
+                            date=date,
+                            amount=amount,
+                            description=row['Selite'],
+                            ledger_account_id=row['Tili']
+                        )
+                        count += 1
 
-                            # Create new AccountEntry
-                            AccountEntry.objects.create(
-                                account=account,
-                                date=date,
-                                amount=amount,
-                                description=row['Selite'],
-                                ledger_account_id=row['Tili']
-                            )
-                            count += 1
-
-                        except Exception as e:
-                            error_msg = f"Error in row {reader.line_num}: {str(e)}"
-                            logger.error(error_msg)
-                            self.stdout.write(self.style.ERROR(error_msg))
-                            failed += 1
-                            continue
+                    except Exception as e:
+                        error_msg = f"Error in row {reader.line_num}: {str(e)}"
+                        logger.error(error_msg)
+                        failed += 1
 
         except FileNotFoundError:
             logger.exception(f"File not found: {filename}")
             return
+        
+        if failed:
+            logger.error(f"Import completed with errors. Imported: {count}, Failed: {failed}")
+            if not options['force']:
+                logger.error("Rolling back transaction")
 
         logger.info(
-            f"Import completed. Imported: {count}, Failed: {failed}"
+            f"Entry import completed. Imported: {count}, Failed: {failed}, Duplicates: {duplicates}"
         )
