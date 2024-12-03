@@ -56,5 +56,14 @@ class Flight(BaseEvent):
     class Meta:
         db_table = 'flights'
 
+        # Enforces unique flights
+        # No flight can exist with the same date, aircraft, departure and landing times
+        constraints = [
+            models.UniqueConstraint(
+                fields=['aircraft', 'departure_time', 'landing_time'],
+                name='flight_time_slot_per_aircraft_unique'
+            )
+        ]
+
     def __str__(self):
         return f"<Flight {self.reference_id} on {self.date}>"
