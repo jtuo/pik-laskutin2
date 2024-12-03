@@ -12,6 +12,10 @@ config.py
 # Output
 output
 
+# Development
+dev.bat
+dev.sh
+
 # Django
 *.log
 *.pot
