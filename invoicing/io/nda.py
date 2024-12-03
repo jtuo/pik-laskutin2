@@ -23,6 +23,7 @@ class BankTransaction:
     operation: str
     receipt_flag: str
     is_receipt: bool
+    sequence_number: int
     
     # Optional fields
     ledger_date: Optional['date'] = None
@@ -38,6 +39,11 @@ class BankTransaction:
     @property
     def amount_decimal(self) -> Decimal:
         return Decimal(str(self.cents)) / Decimal('100')
+
+    @property
+    def unique_identifier(self) -> str:
+        """Creates unique identifier in format MM/YYYY/NNNNNN"""
+        return f"{self.date.month:02d}/{self.date.year}/{self.sequence_number:06d}"
 
 class NDAParsers:
     @staticmethod
@@ -104,6 +110,7 @@ class NDAFileParser:
     def _parse_transaction_record(self, line: str) -> Dict:
         """Parse transaction record (T10)"""
         return {
+            'sequence_number': int(line[6:12]),
             'ledger_date': NDAParsers.parse_date(line[30:36]),
             'value_date': NDAParsers.parse_date(line[42:48]),
             'payment_date': NDAParsers.parse_date(line[36:42]),
@@ -141,6 +148,7 @@ class NDAFileParser:
             bic=header['bic'],
             date=transaction['ledger_date'],  # Using ledger_date as the primary date
             ledger_date=transaction['ledger_date'],
+            sequence_number=transaction['sequence_number'],
             value_date=transaction['value_date'],
             payment_date=transaction['payment_date'],
             name=transaction['name'],
