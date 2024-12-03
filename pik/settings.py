@@ -11,6 +11,18 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from loguru import logger
+import sys
+
+# Remove the default console handler
+# And setup console output for info and above
+logger.remove()
+logger.add(
+    sys.stderr,
+    format="<level>{level: <7}</level> | <level>{message}</level>",
+    level="INFO",
+    colorize=True
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
