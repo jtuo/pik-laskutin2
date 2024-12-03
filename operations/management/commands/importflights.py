@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Q
 from loguru import logger
 from operations.models import Aircraft, Flight
 from invoicing.models import Account
@@ -78,7 +79,8 @@ class Command(BaseCommand):
                             account = Account.objects.get(id=reference_id)
                         except Account.DoesNotExist:
                             logger.warning(
-                                f"Account with reference ID {reference_id} not found"
+                                f"Account with reference ID {reference_id} not found in row {reader.line_num}:\n"
+                                f"{row}"
                             )
                             continue
 
@@ -110,18 +112,31 @@ class Command(BaseCommand):
                     # Sanity check the times
                     if landing_time < departure_time:
                         #raise ValueError("Landing time cannot be before departure time")
-                        logger.warning(f"Landing time before departure time in row {reader.line_num}")
+                        logger.warning(
+                            f"Landing time before departure time in row {reader.line_num}:\n"
+                            f"{row}\n"
+                            f"  Departure: {departure_time}\n"
+                            f"  Landing: {landing_time}"
+                        )
                         continue
                     
                     if landing_time - departure_time < timedelta(minutes=1):
                         #raise ValueError("Flight duration must be at least 1 minute")
-                        logger.warning(f"Flight duration less than 1 minute in row {reader.line_num}")
+                        logger.warning(
+                            f"Flight duration less than 1 minute in row {reader.line_num}:\n"
+                            f"{row}\n"
+                            f"  Duration: {landing_time - departure_time}"
+                        )
                         continue
                     
                     # If the flight is in the future?
                     if date > timezone.now():
                         #raise ValueError("Flight date cannot be in the future")
-                        logger.warning(f"Flight date in the future in row {reader.line_num}")
+                        logger.warning(
+                            f"Flight date in the future in row {reader.line_num}:\n"
+                            f"{row}\n"
+                            f"  Flight date: {date}"
+                        )
                         continue
 
                     # Create flight object (but don't save yet)
@@ -146,13 +161,13 @@ class Command(BaseCommand):
 
         return flights_to_add, failed_rows
 
+    @transaction.atomic
     def handle(self, *args, **options):
         path_pattern = options['path']
         dry_run = options['dry_run']
 
         logger.debug(f"Looking for files matching: {path_pattern}")
         
-        # Find all matching files
         files = glob.glob(path_pattern)
         if not files:
             raise ValueError(f"No files found matching pattern: {path_pattern}")
@@ -161,13 +176,42 @@ class Command(BaseCommand):
         
         all_flights = []
         all_failed_rows = []
+        duplicate_count = 0
 
         # Process each file
         for filename in files:
             try:
                 logger.info(f"Processing file: {filename}")
                 flights, failed_rows = self.process_file(filename)
-                all_flights.extend(flights)
+                
+                # Check each flight for duplicates before adding to all_flights
+                for flight in flights:
+                    # Check for existing flight with same aircraft and date, and matching either time
+                    existing = Flight.objects.filter(
+                        aircraft=flight.aircraft,
+                        date__date=flight.date.date(),
+                    ).filter(
+                        Q(departure_time=flight.departure_time) | 
+                        Q(landing_time=flight.landing_time)
+                    ).first()
+                    
+                    if existing:
+                        duplicate_count += 1
+                        logger.debug(
+                            f"Duplicate flight detected:\n"
+                            f"  Aircraft: {flight.aircraft.registration}\n"
+                            f"  Date: {flight.date.date()}\n"
+                            f"  Times: {flight.departure_time.time()} - {flight.landing_time.time()}\n"
+                            f"  Account: {flight.account.id if flight.account else 'None'}\n"
+                            f"  Purpose: {flight.purpose or 'None'}\n"
+                            f"Matches existing flight:\n"
+                            f"  Times: {existing.departure_time.time()} - {existing.landing_time.time()}\n"
+                            f"  Account: {existing.account.id if existing.account else 'None'}\n"
+                            f"  Purpose: {existing.purpose or 'None'}"
+                        )
+                    else:
+                        all_flights.append(flight)
+                
                 all_failed_rows.extend(failed_rows)
                 logger.info(f"Found {len(flights)} valid flights in {filename}")
             except Exception as e:
@@ -189,21 +233,17 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'Dry run: would import {total_count} flights from {len(files)} files'
+                    f'Dry run: would import {total_count} flights from {len(files)} files. '
+                    f'Found {duplicate_count} duplicates that would be skipped.'
                 )
             )
             return total_count, all_failed_rows
 
-        # Save all flights in a single transaction
-        try:
-            with transaction.atomic():
-                for flight in all_flights:
-                    flight.save()
-                logger.info(f"Successfully imported {total_count} flights")
-        except Exception as e:
-            logger.error(f"Error saving flights: {str(e)}")
-            raise
+        # Save all flights in one transaction
+        for flight in all_flights:
+            flight.save()
 
         logger.info(
-            f'Successfully imported {total_count} flights from {len(files)} files'
+            f'Successfully imported {total_count} flights from {len(files)} files. '
+            f'Skipped {duplicate_count} duplicate flights.'
         )
