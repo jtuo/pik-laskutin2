@@ -153,7 +153,15 @@ class AccountEntryTag(models.Model):
         indexes = [
             models.Index(fields=['value']),
         ]
-        unique_together = ['entry', 'value']  # Prevent duplicate tags
+
+        # Enforces unique tags per entry
+        constraints = [
+            models.UniqueConstraint(
+                fields=['entry', 'value'],
+                name='unique_entry_tag'
+            )
+        ]
+        
         db_table = 'account_entry_tags'
 
     def __str__(self):
