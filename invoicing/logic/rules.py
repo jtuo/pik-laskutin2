@@ -304,7 +304,7 @@ class FlightRule(BaseRule):
     Produce one AccountEntry from a Flight event if it matches all the
     filters, priced with given price, and with description derived from given template.
     """
-    def __init__(self, price, ledger_account_id, filters=None, template="Lento, {registration}, {duration} min"):
+    def __init__(self, price, ledger_account_id, filters=None, template="Lento, {aircraft}, {duration} min"):
         """
         :param price: Hourly price, in euros (as Decimal), or pricing function that takes Flight event as parameter and returns Decimal price
         :param ledger_account_id: Ledger account id of the other side of the transaction (income account)
@@ -331,10 +331,10 @@ class FlightRule(BaseRule):
                 else:
                     logger.debug(f"Filter passed: {str(f)} for {event}")
 
-            # Create template context with aircraft registration
+            # Create template context with aircraft and rounded duration
             context = event.__dict__.copy()
+            context['duration'] = round(context['duration'])  # Round duration for display
             if event.aircraft:
-                context['registration'] = event.aircraft.registration
                 context['aircraft'] = event.aircraft
 
             # Generate description and price
