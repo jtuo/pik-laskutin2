@@ -68,7 +68,7 @@ class Command(BaseCommand):
 
             logger.info(f"Found {len(account_lines)} accounts with uninvoiced events")
 
-            total = 0
+            total = Decimal('0')
 
             # Create actual invoices
             for account, lines in account_lines.items():
