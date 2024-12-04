@@ -15,6 +15,11 @@ class RuleEngine:
     @transaction.atomic
     def process_event(self, event: BaseEvent) -> List:
         lines = []
+
+        if event.reference_id in Config.NO_INVOICING_REFERENCE_IDS:
+            logger.debug(f"Skipping event {event} due to reference ID {event.reference_id}")
+            return lines
+        
         for rule in self.rules:
             new_lines = rule.invoice(event)
             for line in new_lines:
