@@ -23,7 +23,7 @@ class Command(BaseCommand):
         failed = 0
         duplicates = 0
 
-        logger.debug(f"Importing balance records from {filename}")
+        logger.info(f"Importing balance records from {filename}")
 
         try:
             with open(filename, 'r', encoding='utf-8') as csvfile:
@@ -58,7 +58,8 @@ class Command(BaseCommand):
                         except Account.DoesNotExist:
                             if not options['force']:
                                 raise ValueError(f"Account with reference ID {row[1]} not found")
-                            logger.warning(f"Account with reference ID {row[1]} not found, but importing anyway!")
+                            logger.warning(f"Account with reference ID {row[1]} not found, creating new account!")
+                            account = Account.objects.create(id=row[1])
 
                         # Parse balance amount
                         try:
@@ -71,6 +72,7 @@ class Command(BaseCommand):
                             account=account,
                             date=date,
                             amount=balance,
+                            description=row[2],
                             additive=False
                         ).exists():
                             duplicates += 1
