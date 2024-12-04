@@ -7,6 +7,37 @@ class AccountAdmin(admin.ModelAdmin):
     search_fields = ('id', 'name', 'member__name')
     date_hierarchy = 'created_at'
 
+    def get_queryset(self, request):
+        """Only show accounts with members by default"""
+        qs = super().get_queryset(request)
+        has_member = request.GET.get('has_member')
+        if has_member == 'no':
+            return qs.filter(member__isnull=True)
+        elif has_member == 'all':
+            return qs
+        # Default to showing only accounts with members
+        return qs.exclude(member__isnull=True)
+
+    def get_list_filter(self, request):
+        class HasMemberFilter(admin.SimpleListFilter):
+            title = 'has member'
+            parameter_name = 'has_member'
+
+            def lookups(self, request, model_admin):
+                return (
+                    ('yes', 'Yes'),
+                    ('no', 'No'),
+                )
+
+            def queryset(self, request, queryset):
+                if self.value() == 'yes':
+                    return queryset.exclude(member__isnull=True)
+                elif self.value() == 'no':
+                    return queryset.filter(member__isnull=True)
+                return queryset
+
+        return (HasMemberFilter,)
+
 @admin.register(AccountEntry)
 class AccountEntryAdmin(admin.ModelAdmin):
     list_display = ('date_display', 'account', 'description', 'amount', 'invoice', 'additive')
