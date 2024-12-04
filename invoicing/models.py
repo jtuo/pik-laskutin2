@@ -55,7 +55,7 @@ class QuantizedDecimalField(models.DecimalField):
         return super().get_prep_value(value)
 
 class AccountEntry(models.Model):
-    date = models.DateTimeField(db_index=True)
+    date = models.DateField(db_index=True)
     account = models.ForeignKey(
         Account,
         on_delete=models.CASCADE,
