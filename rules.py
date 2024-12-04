@@ -24,10 +24,9 @@ def make_rules():
     ID_PURSI_CAP_2024 = f"pursi_hintakatto_{YEAR}"
     ID_KALUSTOMAKSU_CAP_2024 = f"kalustomaksu_hintakatto_{YEAR}"
 
-    birth_dates = {}
     member_ids = {}
     
-    F_YOUTH = [BirthDateFilter(birth_dates, 25)]
+    F_YOUTH = [BirthDateFilter(25)]
     F_KURSSI = [MemberListFilter(member_ids)]
 
     F_FK = [AircraftFilter("OH-650")]

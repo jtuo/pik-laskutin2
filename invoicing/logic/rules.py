@@ -1,4 +1,5 @@
 import datetime as dt
+from members.models import Member
 
 # All rules must have:
 #
@@ -173,27 +174,32 @@ class BirthDateFilter(object):
     """
     Match events where the pilot's age at flight time is within given range
     """
-    def __init__(self, birth_dates, max_age):
-        self.birth_dates = birth_dates
+    def __init__(self, max_age):
         self.max_age = max_age
         
     def __str__(self):
         return f"BirthDateFilter(max_age={self.max_age})"
 
     def __call__(self, event):
-        birth_date_str = self.birth_dates.get(event.account_id)
-        if not birth_date_str:
-            logger.warning(f"No birth date found for account {event.account_id}")
-            return False
-            
         try:
-            birth_date = dt.date(*map(int, birth_date_str.split("-")))
-        except ValueError:
-            logger.warning(f"Invalid birth date format '{birth_date_str}' for account {event.account_id}")
-            return False
+            member = Member.objects.get(id=event.account_id)
+            if not member.birth_date:
+                logger.warning(f"No birth date set for member {event.account_id}")
+                return False
+                
+            # Ensure we're working with date objects
+            event_date = event.date.date() if isinstance(event.date, dt.datetime) else event.date
             
-        age_at_flight = (event.date - birth_date).days / 365.25
-        return age_at_flight <= self.max_age
+            # Calculate age at flight time
+            age_at_flight = (
+                event_date.year - member.birth_date.year - 
+                ((event_date.month, event_date.day) < (member.birth_date.month, member.birth_date.day))
+            )
+            return age_at_flight <= self.max_age
+            
+        except Member.DoesNotExist:
+            logger.warning(f"Member {event.account_id} not found")
+            return False
 
 class OrFilter(object):
     """
