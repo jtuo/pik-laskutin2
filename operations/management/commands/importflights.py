@@ -227,9 +227,9 @@ class Command(BaseCommand):
             logger.info(f"In file {filename}: Imported: {successes}, Failed: {failures}, Duplicates: {duplicates}")
         
         if total_failures or total_duplicates:
-            logger.warning(f"Flight import completed. Imported: {total_successes}, Failed: {total_failures}, Duplicates: {total_successes}")
+            logger.warning(f"Flight import completed. Imported: {total_successes}, Failed: {total_failures}, Duplicates: {total_duplicates}")
         else:
-            logger.info(f"Flight import completed. Imported: {total_successes}, Failed: {total_failures}, Duplicates: {total_successes}")
+            logger.info(f"Flight import completed. Imported: {total_successes}, Failed: {total_failures}, Duplicates: {total_duplicates}")
         
         if total_failures:
             logger.warning(f"Encountered {total_failures} failures during processing")
