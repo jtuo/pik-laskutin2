@@ -245,11 +245,13 @@ class MemberListFilter(object):
         self.whitelist_mode = whitelist_mode
 
     def __call__(self, event):
-        member_id = str(event.account_id)
-        if self.whitelist_mode:
-            return member_id in self.member_ids
+        member_id = str(event.account.id)
+        matches = member_id in self.member_ids if self.whitelist_mode else member_id not in self.member_ids
+        if not matches:
+            logger.debug(f"MemberListFilter failed: member {member_id} {'not in' if self.whitelist_mode else 'in'} list of {len(self.member_ids)} members")
         else:
-            return member_id not in self.member_ids
+            logger.info(f"MemberListFilter passed: member {member_id} {'in' if self.whitelist_mode else 'not in'} list")
+        return matches
             
     def __str__(self):
         mode = "whitelist" if self.whitelist_mode else "blacklist"
@@ -396,56 +398,6 @@ class FirstRule(BaseRule):
             if lines:
                 return lines
         return []
-
-# class CappedRule(BaseRule):
-#     """
-#     Context-sensitive capped pricing rule
-
-#     1. Retrieve value of variable from context
-#     2. Apply inner rules to the event
-#     3. Filter resulting invoice lines so that:
-#       - if context value is already at or over cap, drop line
-#       - if context value + line value is over cap, modify the line so that context value + modified line value is at cap value, add modified line to context value, and pass through modified line
-#       - else add line value to context value, and pass through line
-#     """
-#     def __init__(self, variable_id, cap_price, context, inner_rule, drop_over_cap=False, cap_description="rajattu hintakattoon"):
-#         """
-#         :param variable_id: Variable to use for capping
-#         :param inner_rule: Rule that produces AccountEntrys that this object filters
-#         :param cap_price: Hourly price, in euros
-#         :param context: Billing context in which to store cap data
-#         """
-#         self.variable_id = variable_id
-#         self.inner_rule = inner_rule
-#         self.cap_price = Decimal(str(cap_price))  # Convert to Decimal safely using string
-#         self.context = context
-#         self.drop_over_cap = drop_over_cap
-#         self.cap_description = cap_description + f" ({self.cap_price}€)"
-
-#     def invoice(self, event):
-#         lines = self.inner_rule.invoice(event)
-#         return list(self._filter_lines(lines))
-    
-#     def _filter_lines(self, lines):
-#         for line in lines:
-#             ctx_val = self.context.get(line.account_id, self.variable_id)
-#             if ctx_val >= self.cap_price:
-#                 # Already over cap, filter lines out
-#                 if self.drop_over_cap:
-#                     logger.debug("Dropping line '%s' (price=%s) - already at cap (%s)", 
-#                               line.item, line.amount, self.cap_price)
-#                     continue
-#                 logger.debug("Converting line '%s' from %s to zero price due to cap", 
-#                           line.description, line.amount)
-#                 line.description += ", " + self.cap_description
-#                 line.amount = Decimal('0')
-#             else:
-#                 if ctx_val + line.amount > self.cap_price:
-#                     # Cap price of line to match cap
-#                     line.description += ", " + self.cap_description
-#                     line.amount = self.cap_price - ctx_val
-#                 self.context.set(line.account_id, self.variable_id, ctx_val + line.amount)
-#             yield line
 
 class CappedRule(BaseRule):
     def __init__(self, cap_id, cap_price, inner_rule, 

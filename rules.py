@@ -7,6 +7,7 @@ from invoicing.logic.rules import (
 
 import datetime as dt
 from decimal import Decimal
+from loguru import logger
 
 def make_rules():
     # Configuration
@@ -24,10 +25,13 @@ def make_rules():
     ID_PURSI_CAP_2024 = f"pursi_hintakatto_{YEAR}"
     ID_KALUSTOMAKSU_CAP_2024 = f"kalustomaksu_hintakatto_{YEAR}"
 
-    member_ids = {}
+    # Kurssialennus
+    from config import Config # Avoid circular import
+    member_ids = Config.COURSE_DISCOUNT
+    if len(member_ids) > 0: logger.warning(f"Course is active for {len(member_ids)} members!")
     
     F_YOUTH = [BirthDateFilter(25)]
-    F_KURSSI = [MemberListFilter(member_ids)]
+    F_KURSSI = [MemberListFilter(member_ids, whitelist_mode=True)]
 
     F_FK = [AircraftFilter("OH-650")]
     F_FM = [AircraftFilter("OH-787")]
