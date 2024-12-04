@@ -304,7 +304,7 @@ class FlightRule(BaseRule):
     Produce one AccountEntry from a Flight event if it matches all the
     filters, priced with given price, and with description derived from given template.
     """
-    def __init__(self, price, ledger_account_id, filters=None, template="Lento, %(registration)s, %(duration)d min"):
+    def __init__(self, price, ledger_account_id, filters=None, template="Lento, {registration}, {duration} min"):
         """
         :param price: Hourly price, in euros (as Decimal), or pricing function that takes Flight event as parameter and returns Decimal price
         :param ledger_account_id: Ledger account id of the other side of the transaction (income account)
@@ -338,7 +338,7 @@ class FlightRule(BaseRule):
                 context['aircraft'] = event.aircraft
 
             # Generate description and price
-            description = self.template % context
+            description = self.template.format(**context)
             price = self.pricing(event)
 
             if not event.account:
@@ -375,10 +375,7 @@ class AllRules(BaseRule):
         for rule in self.inner_rules:
             lines = rule.invoice(event)
             if lines:
-                logger.debug("Rule %s produced %d lines: %s", 
-                           rule.__class__.__name__, 
-                           len(lines),
-                           '; '.join(f"{l.description}: {l.amount}" for l in lines))
+                logger.debug(f"Rule {rule.__class__.__name__} produced {len(lines)} lines: {'; '.join(f'{l.description}: {l.amount}' for l in lines)}")
             result.extend(lines)
         return result
 
@@ -423,11 +420,9 @@ class CappedRule(BaseRule):
             accumulated = self.get_accumulated_amount(entry.account)
             if accumulated >= self.cap_price:
                 if self.drop_over_cap:
-                    logger.debug("Dropping entry '%s' (price=%s) - already at cap (%s)",
-                            entry.description, entry.amount, self.cap_price)
+                    logger.debug(f"Dropping entry '{entry.description}' (price={entry.amount}) - already at cap ({self.cap_price})")
                     entry.delete()
-                logger.debug("Converting entry '%s' from %s to zero price due to cap",
-                        entry.description, entry.amount)
+                logger.debug(f"Converting entry '{entry.description}' from {entry.amount} to zero price due to cap")
                 entry.description += ", " + self.cap_description
                 entry.amount = Decimal('0')
             else:

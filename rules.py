@@ -57,28 +57,28 @@ def make_rules():
             MinimumDurationRule(
                 FlightRule(Decimal('122') * Decimal('0.75'), ACCT_TOWING, 
                           F_TOW + F_TRANSFER_TOW + F_YOUTH,
-                          "Siirtohinaus, TOW (nuorisoalennus), %(duration)d min"),
+                          "Siirtohinaus, TOW (nuorisoalennus 25%), {duration} min"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)"),
             
             # Nuorisoalennus
             MinimumDurationRule(
                 FlightRule(122 * 0.75, ACCT_TOW,
                           F_TOW + F_YOUTH,
-                          "Lento, TOW (nuorisoalennus), %(duration)d min"),
+                          "Lento, TOW (nuorisoalennus 25%), {duration} min"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)"),
             
             # Siirtohinaus
             MinimumDurationRule(
                 FlightRule(Decimal('122'), ACCT_TOWING,
                           F_TOW + F_TRANSFER_TOW,
-                          "Siirtohinaus, TOW, %(duration)d min"),
+                          "Siirtohinaus, TOW, {duration} min"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)"),
             
             # Normaalilento
             MinimumDurationRule(
                 FlightRule(122, ACCT_TOW,
                           F_TOW,
-                          "Lento, TOW, %(duration)d min"),
+                          "Lento, TOW, {duration} min"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)")
         ]),
 
@@ -88,14 +88,14 @@ def make_rules():
             MinimumDurationRule(
                 FlightRule(Decimal('113') * Decimal('0.75'), ACCT_1037,
                           F_1037 + F_YOUTH,
-                          "Lento, 1037 (nuorisoalennus), %(duration)d min"),
+                          "Lento, 1037 (nuorisoalennus 25%), {duration} min"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)"),
             
             # Normaalilento
             MinimumDurationRule(
                 FlightRule(Decimal('113'), ACCT_1037,
                           F_1037,
-                          "Lento, 1037, %(duration)d min"),
+                          "Lento, 1037, {duration} min"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)")
         ]),
 
@@ -107,48 +107,48 @@ def make_rules():
         AllRules([
             # Purtsikat
             FirstRule([
-                FlightRule(Decimal('18') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FK + F_YOUTH, "Lento (nuorisoalennus), %(aircraft)s, %(duration)d min"),
-                FlightRule(Decimal('18') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FK + F_KURSSI, "Lento (kurssialennus), %(aircraft)s, %(duration)d min"),
+                FlightRule(Decimal('18') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FK + F_YOUTH, "Lento (nuorisoalennus 25%), {aircraft}, {duration} min"),
+                FlightRule(Decimal('18') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FK + F_KURSSI, "Lento (kurssialennus 25%), {aircraft}, {duration} min"),
                 FlightRule(Decimal('18'), ACCT_PURSI_KEIKKA, F_FK)
             ]),
             FirstRule([
-                FlightRule(Decimal('26') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FM + F_YOUTH, "Lento (nuorisoalennus), %(aircraft)s, %(duration)d min"),
-                FlightRule(Decimal('26') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FM + F_KURSSI, "Lento (kurssialennus), %(aircraft)s, %(duration)d min"),
+                FlightRule(Decimal('26') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FM + F_YOUTH, "Lento (nuorisoalennus 25%), {aircraft}, {duration} min"),
+                FlightRule(Decimal('26') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FM + F_KURSSI, "Lento (kurssialennus 25%), {aircraft}, {duration} min"),
                 FlightRule(Decimal('26'), ACCT_PURSI_KEIKKA, F_FM)
             ]),
             FirstRule([
-                FlightRule(Decimal('28') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FQ + F_YOUTH, "Lento (nuorisoalennus), %(aircraft)s, %(duration)d min"),
-                FlightRule(Decimal('28') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FQ + F_KURSSI, "Lento (kurssialennus), %(aircraft)s, %(duration)d min"),
+                FlightRule(Decimal('28') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FQ + F_YOUTH, "Lento (nuorisoalennus 25%), {aircraft}, {duration} min"),
+                FlightRule(Decimal('28') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FQ + F_KURSSI, "Lento (kurssialennus 25%), {aircraft}, {duration} min"),
                 FlightRule(Decimal('28'), ACCT_PURSI_KEIKKA, F_FQ)
             ]),
             FirstRule([
-                FlightRule(Decimal('29') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FI + F_YOUTH, "Lento (nuorisoalennus), %(aircraft)s, %(duration)d min"),
-                FlightRule(Decimal('29') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FI + F_KURSSI, "Lento (kurssialennus), %(aircraft)s, %(duration)d min"),
+                FlightRule(Decimal('29') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FI + F_YOUTH, "Lento (nuorisoalennus 25%), {aircraft}, {duration} min"),
+                FlightRule(Decimal('29') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FI + F_KURSSI, "Lento (kurssialennus 25%), {aircraft}, {duration} min"),
                 FlightRule(Decimal('29'), ACCT_PURSI_KEIKKA, F_FI)
             ]),
             FirstRule([
-                FlightRule(Decimal('36') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FY + F_YOUTH, "Lento (nuorisoalennus), %(aircraft)s, %(duration)d min"),
-                FlightRule(Decimal('36') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FY + F_KURSSI, "Lento (kurssialennus), %(aircraft)s, %(duration)d min"),
+                FlightRule(Decimal('36') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FY + F_YOUTH, "Lento (nuorisoalennus 25%), {aircraft}, {duration} min"),
+                FlightRule(Decimal('36') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_FY + F_KURSSI, "Lento (kurssialennus 25%), {aircraft}, {duration} min"),
                 FlightRule(Decimal('36'), ACCT_PURSI_KEIKKA, F_FY)
             ]),
             FirstRule([
-                FlightRule(Decimal('44') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_DG + F_YOUTH, "Lento (nuorisoalennus), %(aircraft)s, %(duration)d min"),
-                FlightRule(Decimal('44') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_DG + F_KURSSI, "Lento (kurssialennus), %(aircraft)s, %(duration)d min"),
+                FlightRule(Decimal('44') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_DG + F_YOUTH, "Lento (nuorisoalennus 25%), {aircraft}, {duration} min"),
+                FlightRule(Decimal('44') * Decimal('0.75'), ACCT_PURSI_KEIKKA, F_DG + F_KURSSI, "Lento (kurssialennus 25%), {aircraft}, {duration} min"),
                 FlightRule(Decimal('44'), ACCT_PURSI_KEIKKA, F_DG)
             ])
         ])),
 
         # Koululentomaksu
-        FlightRule(lambda ev: Decimal('6'), ACCT_PURSI_INSTRUCTION, F_PURTSIKKA + [PurposeFilter("KOU")], "Koululentomaksu, %(aircraft)s"),
+        FlightRule(lambda ev: Decimal('6'), ACCT_PURSI_INSTRUCTION, F_PURTSIKKA + [PurposeFilter("KOU")], "Koululentomaksu, {aircraft}"),
 
         # Kalustomaksu
         CappedRule(ID_KALUSTOMAKSU_CAP_2024, Decimal('90'),
                    AllRules([FlightRule(Decimal('10'), ACCT_KALUSTO, F_PURTSIKKA,
-                                    "Kalustomaksu, %(aircraft)s, %(duration)d min"),
+                                    "Kalustomaksu, {aircraft}, {duration} min"),
                             FlightRule(Decimal('10'), ACCT_KALUSTO, F_MOTTI,
-                                    "Kalustomaksu, %(aircraft)s, %(duration)d min")])),
+                                    "Kalustomaksu, {aircraft}, {duration} min")])),
 
-        FlightRule(lambda ev: Decimal('2'), ACCT_LASKUTUSLISA, F_KAIKKI_KONEET + F_LASKUTUSLISA, "Laskutuslisä, %(aircraft)s, %(invoicing_comment)s")
+        FlightRule(lambda ev: Decimal('2'), ACCT_LASKUTUSLISA, F_KAIKKI_KONEET + F_LASKUTUSLISA, "Laskutuslisä, {aircraft}, {invoicing_comment}")
     ]
     
     return rules
