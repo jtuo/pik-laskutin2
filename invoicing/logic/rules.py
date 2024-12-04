@@ -195,11 +195,16 @@ class BirthDateFilter(object):
                 event_date.year - member.birth_date.year - 
                 ((event_date.month, event_date.day) < (member.birth_date.month, member.birth_date.day))
             )
-            return age_at_flight <= self.max_age
+            matches = age_at_flight <= self.max_age
+            if not matches:
+                logger.debug(f"BirthDateFilter failed: member age {age_at_flight} exceeds max age {self.max_age}")
+            return matches
             
         except Member.DoesNotExist:
             logger.warning(f"Member {event.account_id} not found")
             return False
+        except Exception as e:
+            logger.exception(f"Error in BirthDateFilter for member {event.account_id}: {str(e)}")
 
 class OrFilter(object):
     """
