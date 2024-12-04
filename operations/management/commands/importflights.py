@@ -131,6 +131,19 @@ class Command(BaseCommand):
                             f"  Flight date: {date}"
                         )
 
+                    # Check for required locations when not using force
+                    takeoff_location = row.get('Lähtöpaikka')
+                    landing_location = row.get('Laskeutumispaikka')
+                    
+                    if not options['force']:
+                        if not takeoff_location:
+                            raise ValueError(f"Missing takeoff location in row:\n{row}")
+                        if not landing_location:
+                            raise ValueError(f"Missing landing location in row:\n{row}")
+                    else:
+                        if not takeoff_location or not landing_location:
+                            logger.warning(f"Missing location information in row:\n{row}")
+
                     # Create flight object (but don't save yet)
                     flight = Flight(
                         date=date,  # Make date aware too
@@ -141,7 +154,9 @@ class Command(BaseCommand):
                         account=account,
                         duration=Decimal(row['Lentoaika_desimaalinen']),
                         notes='\n'.join(notes_parts) if notes_parts else None,
-                        purpose=row.get('Tarkoitus')
+                        purpose=row.get('Tarkoitus'),
+                        takeoff_location=row.get('Lähtöpaikka'),
+                        landing_location=row.get('Laskeutumispaikka')
                     )
 
                     existing = Flight.objects.filter(

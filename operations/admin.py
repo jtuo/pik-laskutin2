@@ -14,6 +14,7 @@ class FlightAdmin(admin.ModelAdmin):
         'date_display',  # Custom method for Finnish date format
         'aircraft',
         'flight_times',
+        'airfields',  # New field
         'duration_display',
         'purpose'
     )
@@ -43,5 +44,16 @@ class FlightAdmin(admin.ModelAdmin):
         return f'{hours}:{minutes:02d}'
     duration_display.short_description = 'Duration'
     duration_display.admin_order_field = 'duration'
+
+    def airfields(self, obj):
+        """Format takeoff and landing locations nicely"""
+        if obj.takeoff_location or obj.landing_location:
+            return format_html(
+                '{} → {}',
+                obj.takeoff_location or '?',
+                obj.landing_location or '?'
+            )
+        return '-'
+    airfields.short_description = 'Locations'
 
     ordering = ('-date', 'takeoff_time')

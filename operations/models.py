@@ -49,6 +49,12 @@ class Flight(BaseEvent):
         on_delete=models.CASCADE,
         related_name='flights'
     )
+
+    # We will not require these?
+    # 50 characters, you never know what gets written there
+    takeoff_location = models.CharField(max_length=50, blank=True, null=True)
+    landing_location = models.CharField(max_length=50, blank=True, null=True)
+
     duration = models.DecimalField(max_digits=5, decimal_places=2)
     purpose = models.CharField(max_length=10, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
