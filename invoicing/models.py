@@ -10,8 +10,10 @@ class Account(models.Model):
     id = models.CharField(max_length=20, primary_key=True)  # PIK reference
     member = models.ForeignKey(
         'members.Member',
-        on_delete=models.CASCADE,
-        related_name='accounts'
+        on_delete=models.SET_NULL, # Members can be deleted, but accounts should remain
+        related_name='accounts',
+        null=True, # There are some dangling accounts
+        blank=True # Let's not enforce this at the database level
     )
     name = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
