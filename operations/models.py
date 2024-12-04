@@ -42,7 +42,7 @@ class BaseEvent(models.Model):
         db_table = 'events'
 
 class Flight(BaseEvent):
-    departure_time = models.DateTimeField()
+    takeoff_time = models.DateTimeField()
     landing_time = models.DateTimeField()
     aircraft = models.ForeignKey(
         Aircraft,
@@ -57,10 +57,10 @@ class Flight(BaseEvent):
         db_table = 'flights'
 
         # Enforces unique flights
-        # No flight can exist with the same date, aircraft, departure and landing times
+        # No flight can exist with the same date, aircraft, takeoff and landing times
         constraints = [
             models.UniqueConstraint(
-                fields=['aircraft', 'departure_time', 'landing_time'],
+                fields=['aircraft', 'takeoff_time', 'landing_time'],
                 name='flight_time_slot_per_aircraft_unique'
             )
         ]

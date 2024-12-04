@@ -96,7 +96,7 @@ class Command(BaseCommand):
                     date = datetime.strptime(row['Tapahtumapäivä'], '%Y-%m-%d')
                     date = timezone.make_aware(date)
 
-                    departure_time=self.parse_time(
+                    takeoff_time=self.parse_time(
                         row['Lähtöaika'], 
                         row['Tapahtumapäivä']
                     )
@@ -107,20 +107,20 @@ class Command(BaseCommand):
                     )
 
                     # Sanity check the times
-                    if landing_time < departure_time:
+                    if landing_time < takeoff_time:
                         raise ValueError(
-                            f"Landing time before departure time:\n"
+                            f"Landing time before takeoff time:\n"
                             f"{row}\n"
-                            f"  Departure: {departure_time}\n"
+                            f"  Takeoff: {takeoff_time}\n"
                             f"  Landing: {landing_time}"
                         )
                     
-                    if landing_time - departure_time < timedelta(minutes=1):
+                    if landing_time - takeoff_time < timedelta(minutes=1):
                         # This might not be wrong, but it's suspicious
                         logger.warning(
                             f"Flight duration less than 1 minute:\n"
                             f"{row}\n"
-                            f"  Duration: {landing_time - departure_time}"
+                            f"  Duration: {landing_time - takeoff_time}"
                         )
                     
                     # If the flight is in the future?
@@ -134,7 +134,7 @@ class Command(BaseCommand):
                     # Create flight object (but don't save yet)
                     flight = Flight(
                         date=date,  # Make date aware too
-                        departure_time=departure_time,
+                        takeoff_time=takeoff_time,
                         landing_time=landing_time,
                         reference_id=reference_id,
                         aircraft=aircraft,
@@ -148,7 +148,7 @@ class Command(BaseCommand):
                         aircraft=flight.aircraft,
                         date__date=flight.date.date(),
                     ).filter(
-                        Q(departure_time=flight.departure_time) | 
+                        Q(takeoff_time=flight.takeoff_time) | 
                         Q(landing_time=flight.landing_time)
                     ).first()
 

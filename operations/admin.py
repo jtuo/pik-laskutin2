@@ -22,10 +22,10 @@ class FlightAdmin(admin.ModelAdmin):
     date_hierarchy = 'date'
 
     def flight_times(self, obj):
-        """Format departure and landing times nicely"""
+        """Format takeoff and landing times nicely"""
         return format_html(
             '{} → {}',
-            obj.departure_time.strftime('%H:%M'),
+            obj.takeoff_time.strftime('%H:%M'),
             obj.landing_time.strftime('%H:%M')
         )
     flight_times.short_description = 'Flight Times'
@@ -44,4 +44,4 @@ class FlightAdmin(admin.ModelAdmin):
     duration_display.short_description = 'Duration'
     duration_display.admin_order_field = 'duration'
 
-    ordering = ('-date', 'departure_time')
+    ordering = ('-date', 'takeoff_time')
