@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models import Q
 from loguru import logger
 from operations.models import Aircraft, Flight
+from operations.utils import verify_icao_location
 from invoicing.models import Account
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -20,6 +21,11 @@ class Command(BaseCommand):
             '--force',
             action='store_true',
             help='Continue import even if there are warnings or duplicates'
+        )
+        parser.add_argument(
+            '--allow-foreign-airports',
+            action='store_true',
+            help='Allow non-Finnish ICAO codes (default: only allow EF** and maasto)'
         )
 
     def parse_time(self, time_str, date_str):
@@ -135,14 +141,27 @@ class Command(BaseCommand):
                     takeoff_location = row.get('Lähtöpaikka')
                     landing_location = row.get('Laskeutumispaikka')
                     
-                    if not options['force']:
-                        if not takeoff_location:
-                            raise ValueError(f"Missing takeoff location in row:\n{row}")
-                        if not landing_location:
-                            raise ValueError(f"Missing landing location in row:\n{row}")
-                    else:
-                        if not takeoff_location or not landing_location:
+                    # Verify locations
+                    if not takeoff_location or not landing_location:
+                        if not options['force']:
+                            raise ValueError(f"Missing location information in row:\n{row}")
+                        else:
                             logger.warning(f"Missing location information in row:\n{row}")
+                    else:
+                        # Verify ICAO codes
+                        if not verify_icao_location(takeoff_location, Config.ENFORCED_ICAO_PREFIX if not (options['allow_foreign_airports'] or options['force']) else None):
+                            msg = f"Invalid takeoff location format '{takeoff_location}' in row:\n{row}"
+                            if not options['force']:
+                                raise ValueError(msg)
+                            else:
+                                logger.warning(msg)
+                        
+                        if not verify_icao_location(landing_location, Config.ENFORCED_ICAO_PREFIX if not (options['allow_foreign_airports'] or options['force']) else None):
+                            msg = f"Invalid landing location format '{landing_location}' in row:\n{row}"
+                            if not options['force']:
+                                raise ValueError(msg)
+                            else:
+                                logger.warning(msg)
 
                     # Create flight object (but don't save yet)
                     flight = Flight(
