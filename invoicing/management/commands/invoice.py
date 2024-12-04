@@ -24,9 +24,12 @@ class Command(BaseCommand):
         parser.add_argument('--export', action='store_true',
                           help='Export invoices to text files')
         parser.add_argument('--debug', action='store_true',)
+        parser.add_argument('--group-entries', action='store_true',
+                          help='Group entries by type in export')
 
     @transaction.atomic
     def handle(self, *args, **options):
+        self.options = options
         if not options['debug']:
             logger.remove()
             logger.add(sys.stderr, level="INFO")
@@ -100,13 +103,14 @@ class Command(BaseCommand):
                     total += self.export_invoice(invoice)
                     self.stdout.write(f"Exported invoice to output/{account.id}.txt")
             
-            logger.info(f"Total invoiced: {total}€")
+            logger.info(f"Total invoiced: {total} EUR")
 
         except Exception as e:
             logger.exception(f"Error creating invoices: {str(e)}")
             raise
 
     def export_invoice(self, invoice):
+        self.options = self.options if hasattr(self, 'options') else {}
         """Export an invoice to a text file."""
         import os
         output_dir = "output"
@@ -122,27 +126,64 @@ class Command(BaseCommand):
             f.write(f"Date: {created_date}\n")
             f.write(f"Due date: {due_date}\n\n")
 
-            # Get entries from the invoice and sort by date
-            entries = sorted(invoice.entries.all(), key=lambda x: x.date if x.date else datetime.min)
-
-            # Find the index of the latest non-additive entry
-            latest_balance_idx = -1
-            for idx, entry in enumerate(entries):
-                if not entry.additive:
-                    latest_balance_idx = idx
-
-            # Filter entries to only include those after the latest balance
-            if latest_balance_idx >= 0:
-                entries = entries[latest_balance_idx:]
-
-            f.write("Items:\n")
-            f.write("-" * 60 + "\n")
+            entries = invoice.entries.all()
+            
+            # Find and filter by latest balance entry
+            latest_balance = entries.filter(additive=False).order_by('date').last()
+            if latest_balance:
+                entries = entries.filter(date__gte=latest_balance.date)
+            
             total = Decimal('0')
-            for entry in entries:
-                date_str = entry.date.strftime('%d.%m.%Y') if entry.date else 'N/A'
-                f.write(f"{date_str} {entry.amount:>8}€ - {entry.description}\n")
-                total += entry.amount
+            
+            if not self.options.get('group_entries'):
+                # Original sorting by date only
+                entries = entries.order_by('date')
+                f.write("Items:\n")
+                f.write("-" * 60 + "\n")
+                for entry in entries:
+                    date_str = entry.date.strftime('%d.%m.%Y') if entry.date else 'N/A'
+                    f.write(f"{date_str} {entry.amount:>8} EUR - {entry.description}\n")
+                    total += entry.amount
+            else:
+                # Group entries by type
+                entry_groups = {
+                    'Lentomaksut': [],
+                    'Kalustomaksut': [],
+                    'Kulukorvaukset': [],
+                    'Muut tapahtumat': []
+                }
+                
+                for entry in entries.order_by('date'):
+                    desc_lower = entry.description.lower()
+                    if 'lento' in desc_lower:
+                        entry_groups['Lentomaksut'].append(entry)
+                    elif 'kalusto' in desc_lower:
+                        entry_groups['Kalustomaksut'].append(entry)
+                    elif 'kulukorvaus' in desc_lower:
+                        entry_groups['Kulukorvaukset'].append(entry)
+                    else:
+                        entry_groups['Muut tapahtumat'].append(entry)
+                
+                # Only write header if we have any entries
+                if any(group_entries for group_entries in entry_groups.values()):
+                    f.write("Items:\n")
+                    first_group = True
+                    for group_name, group_entries in entry_groups.items():
+                        if group_entries:
+                            if first_group:
+                                first_group = False
+                            else:
+                                f.write("\n")  # Add spacing between groups
+                            f.write(group_name + ":\n")
+                            f.write("-" * 60 + "\n")
+                            group_total = Decimal('0')
+                            for entry in group_entries:
+                                date_str = entry.date.strftime('%d.%m.%Y') if entry.date else 'N/A'
+                                f.write(f"{date_str} {entry.amount:>8} EUR - {entry.description}\n")
+                                total += entry.amount
+                                group_total += entry.amount
+                            f.write(f"Yhteensä: {group_total:>9} EUR\n")
             f.write("-" * 60 + "\n")
-            f.write(f"Total: {total}€\n")
+            f.write(f"\nMaksettavaa: {total} EUR\n")
 
             return total
