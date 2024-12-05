@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import click
 from loguru import logger
 import sys
+import uuid
 
 from invoicing.models import Account, AccountEntry, Invoice
 from operations.models import BaseEvent, Flight
@@ -33,8 +34,11 @@ class Command(BaseCommand):
         if not options['debug']:
             logger.remove()
             logger.add(sys.stderr, level="INFO")
+        
+        run_uuid = uuid.uuid4().hex[:4]
 
-        logger.info("Generating invoices for uninvoiced events")
+        logger.info(f"Generating invoices for uninvoiced events, run {run_uuid}")
+
         try:
             # Parse dates if provided
             start_date = None
@@ -67,36 +71,67 @@ class Command(BaseCommand):
 
             # Process events through rule engine
             engine = create_default_engine()
-            account_lines = engine.process_events(events)
+            engine.process_events(events)
 
-            logger.info(f"Found {len(account_lines)} accounts with uninvoiced events")
+            # Look up all accounts with outstanding balances
+            accounts_with_outstanding_balances = []
+            for account in Account.objects.all():
+                if account.balance > 0:
+                    accounts_with_outstanding_balances.append(account)
+
+            logger.info(f"Found {len(accounts_with_outstanding_balances)} accounts with outstanding balances")
 
             total = Decimal('0')
 
             # Create actual invoices
-            for account, lines in account_lines.items():
+            for account in accounts_with_outstanding_balances:
 
                 # Create invoice
                 invoice = Invoice.objects.create(
                     account=account,
-                    number=f"INV-{timezone.now().strftime('%Y%m%d')}-{account.id}",
+                    number=f"INV-{timezone.now().strftime('%Y%m%d')}-{account.id}-{run_uuid}",
                     due_date=timezone.now() + timedelta(days=14)
                 )
 
-                # Associate the lines with this invoice
-                for line in lines:
-                    line.invoice = invoice
-                    line.save()
-
-                # Find and add any additional uninvoiced AccountEntries for this account
+                # Find and add any uninvoiced AccountEntries for this account
                 uninvoiced_entries = AccountEntry.objects.filter(
                     account=account,
-                    invoice__isnull=True
+                    invoices__isnull=True
                 )
-                uninvoiced_entries.update(invoice=invoice)
+
+                # Add entries to invoice using many-to-many relationship
+                for entry in uninvoiced_entries:
+                    entry.invoices.add(invoice)
+
+                # If there are no entries, it means that the account has an outstanding balance
+                # We must include all the entries in the invoice since the last balance entry
+                # If there is no balance entry, include all entries
+                if not uninvoiced_entries.exists():
+
+                    logger.warning(f"Account {account.id} has an outstanding balance but no entries to invoice")
+
+                    latest_balance = AccountEntry.objects.filter(
+                        account=account,
+                        additive=False
+                    ).order_by('date').last()
+
+                    if latest_balance:
+                        uninvoiced_entries = AccountEntry.objects.filter(
+                            account=account,
+                            date__gte=latest_balance.date
+                        )
+                    else:
+                        uninvoiced_entries = AccountEntry.objects.filter(
+                            account=account
+                        )
+
+                    # Add these entries to invoice too
+                    for entry in uninvoiced_entries:
+                        entry.invoices.add(invoice)
+                
 
                 self.stdout.write(
-                    f"Created invoice {invoice.number} for {account.id} with {len(lines)} lines"
+                    f"Created invoice {invoice.number} for {account.id} with {len(uninvoiced_entries)} entries"
                 )
 
                 if options['export']:

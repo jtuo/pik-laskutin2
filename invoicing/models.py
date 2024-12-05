@@ -27,6 +27,26 @@ class Account(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+    
+    @property
+    def balance(self):
+        # Get the latest entry with additive=False
+        latest_non_additive_entry = self.entries.filter(additive=False).order_by('-date').first()
+        
+        if latest_non_additive_entry:
+            # Sum entries from the latest non-additive entry onwards
+            entries = self.entries.filter(date__gte=latest_non_additive_entry.date)
+        else:
+            # Sum all entries if no non-additive entry exists
+            entries = self.entries.all()
+        
+        total = entries.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        
+        # Ensure the total is a Decimal and format it to 2 decimal places
+        return Decimal(total).quantize(
+            Decimal('.01'),
+            rounding=ROUND_HALF_UP
+        )
 
 class QuantizedDecimalField(models.DecimalField):
     def __init__(self, *args, **kwargs):
@@ -74,12 +94,10 @@ class AccountEntry(models.Model):
         blank=True,
         related_name='account_entries'
     )
-    invoice = models.ForeignKey(
+    invoices = models.ManyToManyField(
         'Invoice',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='entries'
+        related_name='entries',
+        blank=True
     )
     ledger_account_id = models.CharField(
         max_length=20,
@@ -106,8 +124,11 @@ class AccountEntry(models.Model):
             )
             if self.amount != quantized:
                 raise ValidationError("Amount must have at most 2 decimal places")
-            
-            if self.invoice and self.invoice.status == 'cancelled':
+        
+        # Prevents associating entries with cancelled invoices
+        # Does not apply to new entries
+        if self.pk is not None:
+            if self.invoices.filter(status='cancelled').exists():
                 raise ValidationError("Cannot associate entry with cancelled invoice")
     
     def save(self, *args, **kwargs):
@@ -177,7 +198,7 @@ class Invoice(models.Model):
         PAID = 'paid', 'Paid'
         CANCELLED = 'cancelled', 'Cancelled'
 
-    number = models.CharField(max_length=20, unique=True)
+    number = models.CharField(max_length=50, unique=True)
     created_at = models.DateTimeField(default=timezone.now, db_index=True)
     account = models.ForeignKey(
         Account,

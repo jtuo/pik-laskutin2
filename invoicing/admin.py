@@ -40,7 +40,7 @@ class AccountAdmin(admin.ModelAdmin):
 
 @admin.register(AccountEntry)
 class AccountEntryAdmin(admin.ModelAdmin):
-    list_display = ('date_display', 'account', 'description', 'amount', 'invoice', 'additive')
+    list_display = ('date_display', 'account', 'description', 'amount', 'has_invoices', 'additive')
     list_filter = ('additive', 'created_at')
     search_fields = ('description', 'account__name')
     date_hierarchy = 'date'
@@ -52,7 +52,14 @@ class AccountEntryAdmin(admin.ModelAdmin):
         return obj.date.strftime('%d.%m.%Y')
     
     date_display.short_description = 'Date'
-    date_display.admin_order_field = 'date'  # Maintain sorting ability
+    date_display.admin_order_field = 'date'
+
+    def has_invoices(self, obj):
+        """Indicate if there are invoices associated with the account entry"""
+        return obj.invoice is not None
+    
+    has_invoices.short_description = 'Has Invoices'
+    has_invoices.boolean = True  # Display as a boolean icon
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
