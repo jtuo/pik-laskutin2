@@ -14,12 +14,13 @@ class FlightAdmin(admin.ModelAdmin):
         'date_display',  # Custom method for Finnish date format
         'aircraft',
         'flight_times',
-        'airfields',  # New field
+        'airfields',
         'duration_display',
-        'purpose'
+        'purpose',
+        'captain'
     )
     list_filter = ('aircraft', 'purpose', 'date')
-    search_fields = ('reference_id', 'notes')
+    search_fields = ('reference_id', 'notes', 'captain', 'passengers')
     date_hierarchy = 'date'
 
     def flight_times(self, obj):

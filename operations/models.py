@@ -61,6 +61,10 @@ class Flight(BaseEvent):
 
     surcharge_reason = models.TextField(blank=True, null=True)
     discount_reason = models.TextField(blank=True, null=True)
+    
+    # Flight crew and passengers
+    captain = models.CharField(max_length=100, blank=True, null=True, verbose_name="PIC")
+    passengers = models.TextField(blank=True, null=True, help_text="List of passengers on the flight")
 
     class Meta:
         db_table = 'flights'

@@ -103,14 +103,12 @@ class Command(BaseCommand):
                                 f"{row}"
                             )
 
+                    # Extract captain and passengers
+                    captain = row.get('Opettaja/Päällikkö')
+                    passengers = row.get('Oppilas/Matkustaja')
+
                     # Construct notes
-                    notes_parts = []
-                    if row.get('Opettaja/Päällikkö'):
-                        notes_parts.append(f"Pilot: {row['Opettaja/Päällikkö']}")
-                    if row.get('Oppilas/Matkustaja'):
-                        notes_parts.append(f"Passenger: {row['Oppilas/Matkustaja']}")
-                    if row.get('Tarkoitus'):
-                        notes_parts.append(f"Purpose: {row['Tarkoitus']}")
+                    notes_parts = None
 
                     # Parse times
                     date = datetime.strptime(row['Tapahtumapäivä'], '%Y-%m-%d')
@@ -194,6 +192,8 @@ class Command(BaseCommand):
                         'account': account,
                         'duration': Decimal(row['Lentoaika_desimaalinen']),
                         'notes': '\n'.join(notes_parts) if notes_parts else None,
+                        'captain': captain,
+                        'passengers': passengers,
                         'surcharge_reason': row.get('Laskutuslisä syy'),
                         'purpose': row.get('Tarkoitus'),
                         'takeoff_location': row.get('Lähtöpaikka'),
