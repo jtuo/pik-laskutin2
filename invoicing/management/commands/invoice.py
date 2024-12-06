@@ -24,16 +24,12 @@ class Command(BaseCommand):
                           help='End date for events (YYYY-MM-DD)')
         parser.add_argument('--export', action='store_true',
                           help='Export invoices to text files')
-        parser.add_argument('--debug', action='store_true',)
         parser.add_argument('--group-entries', action='store_true',
                           help='Group entries by type in export')
 
     @transaction.atomic
     def handle(self, *args, **options):
         self.options = options
-        if not options['debug']:
-            logger.remove()
-            logger.add(sys.stderr, level="INFO")
         
         run_uuid = uuid.uuid4().hex[:4]
 
