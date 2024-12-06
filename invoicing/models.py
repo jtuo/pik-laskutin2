@@ -136,7 +136,7 @@ class AccountEntry(models.Model):
         super().save(*args, **kwargs)
     
     def delete(self, *args, **kwargs):
-        if self.invoice:
+        if self.invoices.exists():
             raise ProtectedError(
                 "Cannot delete account entry that is part of an invoice.",
                 obj=self

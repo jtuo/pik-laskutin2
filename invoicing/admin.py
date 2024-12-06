@@ -56,7 +56,7 @@ class AccountEntryAdmin(admin.ModelAdmin):
 
     def has_invoices(self, obj):
         """Indicate if there are invoices associated with the account entry"""
-        return obj.invoice is not None
+        return obj.invoices.exists()
     
     has_invoices.short_description = 'Has Invoices'
     has_invoices.boolean = True  # Display as a boolean icon
