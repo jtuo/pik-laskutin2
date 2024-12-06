@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Account, AccountEntry, Invoice
+from .models import Account, AccountEntry, AccountEntryTag, Invoice
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
@@ -60,6 +60,13 @@ class AccountEntryAdmin(admin.ModelAdmin):
     
     has_invoices.short_description = 'Has Invoices'
     has_invoices.boolean = True  # Display as a boolean icon
+
+@admin.register(AccountEntryTag)
+class AccountEntryTagAdmin(admin.ModelAdmin):
+    list_display = ('value', 'entry')
+    search_fields = ('value', 'entry__description')
+    list_filter = ('value',)
+    raw_id_fields = ('entry',)
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):

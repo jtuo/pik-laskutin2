@@ -187,6 +187,8 @@ class AccountEntryTag(models.Model):
         ]
 
         db_table = 'account_entry_tags'
+        verbose_name = 'Tag'
+        verbose_name_plural = 'Tags'
 
     def __str__(self):
         return self.value
