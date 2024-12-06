@@ -2,7 +2,7 @@ from invoicing.logic.rules import (
     FlightRule, AircraftFilter, PeriodFilter, CappedRule, AllRules, FirstRule, 
     OrFilter, PurposeFilter, SurhargeFilter, TransferTowFilter, 
     PositivePriceFilter, NegativePriceFilter, BirthDateFilter, 
-    MinimumDurationRule, MemberListFilter
+    MinimumDurationRule, MemberListFilter, DiscountReasonFilter
 )
 
 import datetime as dt
@@ -41,9 +41,10 @@ def make_rules():
     F_DG = [AircraftFilter("OH-952")]
     F_TOW = [AircraftFilter("OH-TOW")]
     F_1037 = [AircraftFilter("OH-1037")]
-    F_1037_OPEALE = [AircraftFilter("OH-1037-opeale")]
 
-    F_MOTTI = [OrFilter([F_TOW + F_1037+ F_1037_OPEALE])]
+    OPEALE = [DiscountReasonFilter("opeale")]
+
+    F_MOTTI = [OrFilter([F_TOW + F_1037])]
     F_PURTSIKKA = [OrFilter([F_FK + F_FM + F_FQ + F_FY + F_FI + F_DG])]
     F_KAIKKI_KONEET = [OrFilter([F_MOTTI + F_PURTSIKKA])]
 
@@ -84,6 +85,11 @@ def make_rules():
 
         # OH-1037
         FirstRule([
+            # OH-1037 opeale
+            MinimumDurationRule(
+                FlightRule(Decimal('65'), ACCT_1037_OPEALE, F_1037 + OPEALE, "Lento {aircraft}, {duration} min (opealennus)"),
+                F_MOTTI, 15, "(minimilaskutus 15 min)"),
+
             # Nuorisoalennus
             MinimumDurationRule(
                 FlightRule(Decimal('113') * Decimal('0.75'), ACCT_1037,
@@ -98,9 +104,6 @@ def make_rules():
                           "Lento {aircraft}, {duration} min"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)")
         ]),
-
-        # OH-1037 opeale
-        FlightRule(Decimal('65'), ACCT_1037_OPEALE, F_1037_OPEALE, "Lento {duration} min (opealennus)"),
 
         # Purtsikat
         CappedRule(ID_PURSI_CAP_2024, Decimal('1250'),

@@ -157,6 +157,18 @@ class SurhargeFilter(object):
         if hasattr(event, 'surcharge_reason'):
             return bool(event.surcharge_reason)
 
+class DiscountReasonFilter(object):
+    """
+    Match (Flight) events with surcharge_reason set (indicates invoicing surcharge should be added)
+    """
+    def __init__(self, reason):
+        self.reason = reason
+    def __str__(self):
+        return f"DiscountReasonFilter ({self.reason})"
+    def __call__(self, event):
+        if event.discount_reason is None: return False
+        return event.discount_reason.lower() == self.reason.lower()
+
 class PositivePriceFilter(object):
     """
     Match SimpleEvents with price 0 or greater

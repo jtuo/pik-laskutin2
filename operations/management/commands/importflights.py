@@ -40,6 +40,9 @@ class Command(BaseCommand):
             )
         
         return timezone.make_aware(naive_datetime)
+    
+    def parse_registration(self, registration: str) -> str:
+        return registration.upper()
 
     def process_file(self, filename, options):
         successes = 0
@@ -62,11 +65,25 @@ class Command(BaseCommand):
             for row in reader:
                 try:
                     # Extract registration number from Selite
-                    selite_reg = row['Selite'].split()[0].upper()
+                    selite_reg = self.parse_registration(row['Selite'])
 
                     if selite_reg in Config.NO_INVOICING_AIRCRAFT:
                         logger.warning(f"Skipping flight for aircraft {selite_reg} (no-invoicing)")
                         continue
+
+                    # Use AIRCRAFT_METADATA_MAP to add metadata to the flight
+                    # Mainly implemented as a workaround to account for 1037-opeale flights
+                    metadata_override = {}
+                    if hasattr(Config, 'AIRCRAFT_METADATA_MAP'):
+                        for pattern, override in Config.AIRCRAFT_METADATA_MAP.items():
+                            if pattern.upper() == selite_reg:
+                                metadata_override = override
+                                if 'aircraft' in override:
+                                    selite_reg = self.parse_registration(override['aircraft'])
+                                    metadata_override = {k: v for k, v in override.items() if k != 'aircraft'}
+                                else:
+                                    metadata_override = override
+                                break
 
                     # Find aircraft
                     try:
@@ -85,7 +102,6 @@ class Command(BaseCommand):
                                 f"Account with missing ID {reference_id}:\n",
                                 f"{row}"
                             )
-
 
                     # Construct notes
                     notes_parts = []
@@ -169,20 +185,25 @@ class Command(BaseCommand):
                             break
 
                     # Create flight object (but don't save yet)
-                    flight = Flight(
-                        date=date,  # Make date aware too
-                        takeoff_time=takeoff_time,
-                        landing_time=landing_time,
-                        reference_id=reference_id,
-                        aircraft=aircraft,
-                        account=account,
-                        duration=Decimal(row['Lentoaika_desimaalinen']),
-                        notes='\n'.join(notes_parts) if notes_parts else None,
-                        surcharge_reason=row.get('Laskutuslisä syy'),
-                        purpose=row.get('Tarkoitus'),
-                        takeoff_location=row.get('Lähtöpaikka'),
-                        landing_location=row.get('Laskeutumispaikka')
-                    )
+                    flight_data = {
+                        'date': date,  # Make date aware too
+                        'takeoff_time': takeoff_time,
+                        'landing_time': landing_time,
+                        'reference_id': reference_id,
+                        'aircraft': aircraft,
+                        'account': account,
+                        'duration': Decimal(row['Lentoaika_desimaalinen']),
+                        'notes': '\n'.join(notes_parts) if notes_parts else None,
+                        'surcharge_reason': row.get('Laskutuslisä syy'),
+                        'purpose': row.get('Tarkoitus'),
+                        'takeoff_location': row.get('Lähtöpaikka'),
+                        'landing_location': row.get('Laskeutumispaikka')
+                    }
+
+                    # Apply any metadata overrides
+                    flight_data.update(metadata_override)
+                    
+                    flight = Flight(**flight_data)
 
                     existing = Flight.objects.filter(
                         aircraft=flight.aircraft,
