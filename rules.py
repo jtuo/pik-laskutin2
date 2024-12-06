@@ -1,7 +1,7 @@
 from invoicing.logic.rules import (
     FlightRule, AircraftFilter, PeriodFilter, CappedRule, AllRules, FirstRule, 
     OrFilter, PurposeFilter, InvoicingChargeFilter, TransferTowFilter, 
-    SetLedgerYearRule, PositivePriceFilter, NegativePriceFilter, BirthDateFilter, 
+    PositivePriceFilter, NegativePriceFilter, BirthDateFilter, 
     MinimumDurationRule, MemberListFilter
 )
 

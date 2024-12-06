@@ -439,33 +439,3 @@ class CappedRule(BaseRule):
     def invoice(self, event):
         entries = self.inner_rule.invoice(event)
         return list(self._filter_entries(entries))
-
-class SetDateRule(BaseRule):
-    """
-    Rule that sets a context variable to date of last line produced by inner rule
-    """
-    def __init__(self, variable_id, context, inner_rule):
-        self.variable_id = variable_id
-        self.inner_rule = inner_rule
-        self.context = context
-
-    def invoice(self, event):
-        lines = self.inner_rule.invoice(event)
-        for line in lines:
-            self.context.set(line.account_id, self.variable_id, line.date.isoformat())
-        return lines
-
-class SetLedgerYearRule(BaseRule):
-    """
-    Rule that writes given ledger year into output AccountEntrys if it's not set
-    """
-    def __init__(self, inner_rule, ledger_year):
-        self.inner_rule = inner_rule
-        self.ledger_year = ledger_year
-
-    def invoice(self, event):
-        lines = self.inner_rule.invoice(event)
-        for line in lines:
-            if line.ledger_year is None:
-                line.ledger_year = self.ledger_year
-        return lines
