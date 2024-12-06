@@ -59,6 +59,8 @@ class Flight(BaseEvent):
     purpose = models.CharField(max_length=10, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
 
+    surcharge_reason = models.TextField(blank=True, null=True)
+
     class Meta:
         db_table = 'flights'
 

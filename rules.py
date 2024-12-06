@@ -1,6 +1,6 @@
 from invoicing.logic.rules import (
     FlightRule, AircraftFilter, PeriodFilter, CappedRule, AllRules, FirstRule, 
-    OrFilter, PurposeFilter, InvoicingChargeFilter, TransferTowFilter, 
+    OrFilter, PurposeFilter, SurhargeFilter, TransferTowFilter, 
     PositivePriceFilter, NegativePriceFilter, BirthDateFilter, 
     MinimumDurationRule, MemberListFilter
 )
@@ -47,7 +47,7 @@ def make_rules():
     F_PURTSIKKA = [OrFilter([F_FK + F_FM + F_FQ + F_FY + F_FI + F_DG])]
     F_KAIKKI_KONEET = [OrFilter([F_MOTTI + F_PURTSIKKA])]
 
-    F_LASKUTUSLISA = [InvoicingChargeFilter()]
+    F_LASKUTUSLISA = [SurhargeFilter()]
     F_TRANSFER_TOW = [TransferTowFilter()]
 
     rules = [
@@ -148,7 +148,7 @@ def make_rules():
                             FlightRule(Decimal('10'), ACCT_KALUSTO, F_MOTTI,
                                     "Kalustomaksu {aircraft}, {duration} min")])),
 
-        FlightRule(lambda ev: Decimal('2'), ACCT_LASKUTUSLISA, F_KAIKKI_KONEET + F_LASKUTUSLISA, "Laskutuslisä {aircraft}, {invoicing_comment}")
+        FlightRule(lambda ev: Decimal('2'), ACCT_LASKUTUSLISA, F_KAIKKI_KONEET + F_LASKUTUSLISA, "Laskutuslisä {aircraft}, {surcharge_reason}")
     ]
     
     return rules

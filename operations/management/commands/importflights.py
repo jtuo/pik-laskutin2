@@ -95,8 +95,6 @@ class Command(BaseCommand):
                         notes_parts.append(f"Passenger: {row['Oppilas/Matkustaja']}")
                     if row.get('Tarkoitus'):
                         notes_parts.append(f"Purpose: {row['Tarkoitus']}")
-                    if row.get('Laskutuslisä syy'):
-                        notes_parts.append(f"Billing note: {row['Laskutuslisä syy']}")
 
                     # Parse times
                     date = datetime.strptime(row['Tapahtumapäivä'], '%Y-%m-%d')
@@ -162,6 +160,13 @@ class Command(BaseCommand):
                                 raise ValueError(msg)
                             else:
                                 logger.warning(msg)
+                    
+                    # Workaround for Google Sheets weirdness?
+                    # Search which row contains has "laskutuslisä" (non case sensitive)
+                    for key, value in row.items():
+                        if "laskutuslisä" in key.lower():
+                            row['Laskutuslisä syy'] = value
+                            break
 
                     # Create flight object (but don't save yet)
                     flight = Flight(
@@ -173,6 +178,7 @@ class Command(BaseCommand):
                         account=account,
                         duration=Decimal(row['Lentoaika_desimaalinen']),
                         notes='\n'.join(notes_parts) if notes_parts else None,
+                        surcharge_reason=row.get('Laskutuslisä syy'),
                         purpose=row.get('Tarkoitus'),
                         takeoff_location=row.get('Lähtöpaikka'),
                         landing_location=row.get('Laskeutumispaikka')

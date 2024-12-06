@@ -147,14 +147,15 @@ class TransferTowFilter(object):
         #return bool(event.transfer_tow) # TODO
         return False
 
-class InvoicingChargeFilter(object):
+class SurhargeFilter(object):
     """
-    Match (Flight) events with invoicing_comment set (indicates invoicing surcharge should be added)
+    Match (Flight) events with surcharge_reason set (indicates invoicing surcharge should be added)
     """
     def __str__(self):
-        return "InvoicingChargeFilter"
+        return "SurhargeFilter"
     def __call__(self, event):
-        return bool(getattr(event, 'invoicing_comment', None))
+        if hasattr(event, 'surcharge_reason'):
+            return bool(event.surcharge_reason)
 
 class PositivePriceFilter(object):
     """
