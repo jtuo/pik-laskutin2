@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models.deletion import ProtectedError
-from django.template.loader import render_to_string
+from django.template import Template, Context
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import date
@@ -221,6 +221,7 @@ class Invoice(models.Model):
         related_name='invoices'
     )
     due_date = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=10,
         choices=Status.choices,
@@ -273,14 +274,14 @@ class Invoice(models.Model):
             self.due_date is not None
         )
 
-    def render_to_string(self):
+    def render(self, template):
         """Render invoice to string format using Django templates"""
-        context = {
+        context = Context({
             'invoice': self,
             'entries': self.entries.order_by('date'),
             'total': self.total_amount
-        }
-        return render_to_string('invoicing/invoice_export.txt', context)
+        })
+        return Template(template).render(context)
 
     def __str__(self):
         return f"<Invoice {self.number}: {self.status}>"
