@@ -18,7 +18,9 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('account_id', nargs='?', type=str,
-                          help='Optional account ID to invoice')
+                          help='Account ID to invoice')
+        parser.add_argument('--all-accounts', action='store_true',
+                          help='Invoice all accounts with uninvoiced entries')
         parser.add_argument('--start-date', type=str,
                           help='Start date for events (YYYY-MM-DD)')
         parser.add_argument('--end-date', type=str,
@@ -51,15 +53,23 @@ class Command(BaseCommand):
             if options['end_date']:
                 end_date = timezone.make_aware(datetime.strptime(options['end_date'], '%Y-%m-%d'))
 
+            # Validate arguments
+            if not options['account_id'] and not options['all_accounts']:
+                logger.error("Must specify either account_id or --all-accounts")
+                return
+
             # Build query for uninvoiced events (Flights only)
             query = Flight.objects.filter(
                 account_entries__isnull=True
             )
-            
-            logger.debug(f"Found {query.count()} uninvoiced events")
 
             if options['account_id']:
                 query = query.filter(account_id=options['account_id'])
+                logger.info(f"Processing events for account {options['account_id']}")
+            else:
+                logger.info("Processing events for all accounts")
+            
+            logger.debug(f"Found {query.count()} uninvoiced events")
             if start_date:
                 query = query.filter(date__gte=start_date)
             if end_date:
@@ -78,7 +88,13 @@ class Command(BaseCommand):
 
             # Look up all accounts with outstanding balances
             accounts_with_outstanding_balances = []
-            for account in Account.objects.all():
+            
+            if options['account_id']:
+                accounts = Account.objects.filter(id=options['account_id'])
+            else:
+                accounts = Account.objects.all()
+                
+            for account in accounts:
                 if account.balance > 0:
                     accounts_with_outstanding_balances.append(account)
 
