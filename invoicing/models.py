@@ -47,6 +47,60 @@ class Account(models.Model):
             Decimal('.01'),
             rounding=ROUND_HALF_UP
         )
+    
+    @property
+    def days_overdue(self):
+        """
+        Calculate how many days since the account last had a zero or negative balance.
+        Returns None if account is not overdue (current balance <= 0).
+        """
+        if self.balance <= 0:
+            return None
+            
+        # Get all entries ordered by date
+        entries = self.entries.order_by('date')
+        
+        # Get the latest non-additive entry's date (if any)
+        latest_non_additive = entries.filter(additive=False).order_by('-date').first()
+        if latest_non_additive:
+            # Only consider entries since the last non-additive entry
+            entries = entries.filter(date__gte=latest_non_additive.date)
+        
+        running_balance = Decimal('0.00')
+        last_non_overdue_date = None
+        
+        # Calculate running balance and track the last time it was <= 0 (not owing money)
+        for entry in entries:
+            running_balance += entry.amount
+            if running_balance <= 0:
+                last_non_overdue_date = entry.date
+        
+        if last_non_overdue_date is None:
+            # If always overdue since last non-additive entry (or ever),
+            # use the first entry date or latest non-additive date
+            if latest_non_additive:
+                last_non_overdue_date = latest_non_additive.date
+            else:
+                first_entry = entries.first()
+                if not first_entry:
+                    return None
+                last_non_overdue_date = first_entry.date
+        
+        # Calculate days since last time account was not overdue
+        return (timezone.now().date() - last_non_overdue_date).days
+    
+    @property
+    def days_since_last_payment(self):
+        """Calculate days since last payment (negative entries with 'Maksu' in description)"""
+        last_payment = self.entries.filter(
+            description__icontains='Maksu',
+            amount__lt=0  # Only negative amounts are payments
+        ).order_by('-date').first()
+        
+        if not last_payment:
+            return None
+            
+        return (timezone.now().date() - last_payment.date).days
 
 class QuantizedDecimalField(models.DecimalField):
     def __init__(self, *args, **kwargs):
