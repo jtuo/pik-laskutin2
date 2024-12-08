@@ -25,6 +25,10 @@ class Command(BaseCommand):
                           help='Export invoices to text files')
         parser.add_argument('--delete-drafts', action='store_true',
                             help='Delete draft invoices before export')
+        parser.add_argument('--uninvoiced-entries-only', action='store_true',
+                            help='Only invoice entries that have not been invoiced yet')
+        parser.add_argument('--dry-run', action='store_true',
+                            help='Database changes are rolled back after processing')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -46,11 +50,17 @@ class Command(BaseCommand):
                 accounts = Account.objects.filter(id=options['account_id'])
             else:
                 accounts = Account.objects.all()
-                
-            for account in accounts:
-                balance_entries, balance = AccountBalance(account).compute()
-                if balance > 0:
-                    accounts_with_outstanding_balances.append((account, balance_entries, balance))
+            
+            if options['uninvoiced_entries_only']:
+                for account in accounts:
+                    entries = AccountEntry.objects.filter(account=account, invoices__isnull=True)
+                    if entries.exists():
+                        accounts_with_outstanding_balances.append((account, entries, account.balance))
+            else:
+                for account in accounts:
+                    balance_entries, balance = AccountBalance(account).compute()
+                    if balance > 0:
+                        accounts_with_outstanding_balances.append((account, balance_entries, balance))
 
             logger.info(f"Found {len(accounts_with_outstanding_balances)} accounts with outstanding balances")
 
@@ -65,26 +75,32 @@ class Command(BaseCommand):
                     number=f"INV-{timezone.now().strftime('%Y%m%d')}-{account.id}-{run_uuid}",
                     due_date=timezone.now() + timedelta(days=14)
                 )
+                
+                if options['uninvoiced_entries_only']:
+                    # Filter out entries that have already been invoiced
+                    entries = balance_entries
+                    for entry in entries:
+                        entry.invoices.add(invoice)
+                else:
+                    # We need to invoice all entries since the last zero balance
+                    entries = []
+                    
+                    # Find last entry that was at zero balance
+                    for balance_entry in reversed(balance_entries):
+                        if balance_entry.balance == 0:
+                            break
+                        entries.append(balance_entry.entry)
 
-                # We need to invoice all entries since the last zero balance
-                entries = []
+                        # Stop if the entry is not additive
+                        # This is because "non-additive" entries SET the balance to a specific value 
+                        # Because of this, earlier entries should not be included in the invoice
+                        # Otherwise, they contribute to the total of the invoice, which is incorrect
+                        if not balance_entry.entry.additive:
+                            break
 
-                # Find last entry that was at zero balance
-                for balance_entry in reversed(balance_entries):
-                    if balance_entry.balance == 0:
-                        break
-                    entries.append(balance_entry.entry)
-
-                    # Stop if the entry is not additive
-                    # This is because "non-additive" entries SET the balance to a specific value 
-                    # Because of this, earlier entries should not be included in the invoice
-                    # Otherwise, they contribute to the total of the invoice, which is incorrect
-                    if not balance_entry.entry.additive:
-                        break
-
-                # Add entries to invoice using many-to-many relationship
-                for entry in entries:
-                    entry.invoices.add(invoice)
+                    # Add entries to invoice using many-to-many relationship
+                    for entry in entries:
+                        entry.invoices.add(invoice)
                 
                 # There should be at least one entry to invoice
                 if not entries:
@@ -104,14 +120,27 @@ class Command(BaseCommand):
                 # This makes sure that the invoice contains all relevant entries
 
                 if invoice.total_amount != balance:
-                    logger.error("The logic of the accounting system is flawed. Please investigate.")
-                    logger.error("Contact the 'developers', or better yet, fix it yourself :D")
-                    raise ValueError(
-                        f"Total amount of invoice {invoice.number} ({invoice.total_amount}) "
-                        f"does not match account balance ({account.balance})"
-                    )
+                    if options['uninvoiced_entries_only']:
+                        logger.warning(
+                            f"Account {account.id} has an outstanding balance of {balance} that is not invoiced",
+                            f"Total amount of invoice {invoice.number} is {invoice.total_amount}"
+                            "This is expected if the '--uninvoiced-entries-only' flag is set"
+                        )
+                    else:
+                        logger.error(
+                            "The logic of the accounting system is flawed. Please investigate.",
+                            "Contact the 'developers', or better yet, fix it yourself :D"
+                        )
+                        raise ValueError(
+                            f"Total amount of invoice {invoice.number} ({invoice.total_amount}) "
+                            f"does not match account balance ({account.balance})"
+                        )
             
             logger.info(f"Total invoiced: {total} EUR")
+
+            if options['dry_run']:
+                logger.info("--dry-run is enabled, rolling back transaction")
+                transaction.set_rollback(True)
 
         except Exception as e:
             logger.exception(f"Error creating invoices: {str(e)}")
