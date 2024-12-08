@@ -1,10 +1,15 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models.deletion import ProtectedError
+from django.template.loader import render_to_string
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
+from datetime import date
+from invoicing.logic.accounting import AccountBalance
 from django.db.models import Sum
 from loguru import logger
+from typing import Optional, List
+import os
 
 class Account(models.Model):
     id = models.CharField(max_length=20, primary_key=True)  # PIK reference
@@ -27,67 +32,21 @@ class Account(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
-    
+
     @property
-    def balance(self):
-        # Get the latest entry with additive=False
-        latest_non_additive_entry = self.entries.filter(additive=False).order_by('-date').first()
-        
-        if latest_non_additive_entry:
-            # Sum entries from the latest non-additive entry onwards
-            entries = self.entries.filter(date__gte=latest_non_additive_entry.date)
-        else:
-            # Sum all entries if no non-additive entry exists
-            entries = self.entries.all()
-        
-        total = entries.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        
-        # Ensure the total is a Decimal and format it to 2 decimal places
-        return Decimal(total).quantize(
-            Decimal('.01'),
-            rounding=ROUND_HALF_UP
-        )
+    def balance(self) -> Decimal:
+        _, balance = AccountBalance(self).compute()
+        return balance
+
+    @property
+    def last_overdue(self) -> Optional[date]:
+        return AccountBalance(self).get_last_non_overdue_date()
     
     @property
     def days_overdue(self):
-        """
-        Calculate how many days since the account last had a zero or negative balance.
-        Returns None if account is not overdue (current balance <= 0).
-        """
-        if self.balance <= 0:
-            return None
-            
-        # Get all entries ordered by date
-        entries = self.entries.order_by('date')
-        
-        # Get the latest non-additive entry's date (if any)
-        latest_non_additive = entries.filter(additive=False).order_by('-date').first()
-        if latest_non_additive:
-            # Only consider entries since the last non-additive entry
-            entries = entries.filter(date__gte=latest_non_additive.date)
-        
-        running_balance = Decimal('0.00')
-        last_non_overdue_date = None
-        
-        # Calculate running balance and track the last time it was <= 0 (not owing money)
-        for entry in entries:
-            running_balance += entry.amount
-            if running_balance <= 0:
-                last_non_overdue_date = entry.date
-        
-        if last_non_overdue_date is None:
-            # If always overdue since last non-additive entry (or ever),
-            # use the first entry date or latest non-additive date
-            if latest_non_additive:
-                last_non_overdue_date = latest_non_additive.date
-            else:
-                first_entry = entries.first()
-                if not first_entry:
-                    return None
-                last_non_overdue_date = first_entry.date
-        
-        # Calculate days since last time account was not overdue
-        return (timezone.now().date() - last_non_overdue_date).days
+        last_overdue = self.last_overdue
+        if not last_overdue: return None
+        return (timezone.now().date() - last_overdue).days
     
     @property
     def days_since_last_payment(self):
@@ -293,9 +252,11 @@ class Invoice(models.Model):
 
     @property
     def total_amount(self):
-        return self.entries.aggregate(
-            total=Sum('amount')
-        )['total'] or Decimal('0.00')
+        total = self.entries.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        return total.quantize(
+            Decimal('.01'),
+            rounding=ROUND_HALF_UP
+        )
 
     @property
     def is_overdue(self):
@@ -311,6 +272,15 @@ class Invoice(models.Model):
             self.entries.exists() and
             self.due_date is not None
         )
+
+    def render_to_string(self):
+        """Render invoice to string format using Django templates"""
+        context = {
+            'invoice': self,
+            'entries': self.entries.order_by('date'),
+            'total': self.total_amount
+        }
+        return render_to_string('invoicing/invoice_export.txt', context)
 
     def __str__(self):
         return f"<Invoice {self.number}: {self.status}>"
