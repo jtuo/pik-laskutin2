@@ -15,31 +15,36 @@ class RuleEngine:
 
     @transaction.atomic
     def process_event(self, event: BaseEvent) -> List:
-        lines = []
+        entries = []
 
         if event.reference_id in Config.NO_INVOICING_REFERENCE_IDS:
             logger.debug(f"Skipping event {event} due to reference ID {event.reference_id}")
-            return lines
+            return entries
         
         for rule in self.rules:
-            new_lines = rule.invoice(event)
-            for line in new_lines:
-                if isinstance(line, AccountEntry):
-                    line.save()
-                    event.account_entries.add(line)
-                lines.append(line)
-        return lines
+            new_entries = rule.invoice(event)
+            for entry in new_entries:
+                if isinstance(entry, AccountEntry):
+                    entry.save()
+                    event.account_entries.add(entry)
+                entries.append(entry)
+        
+        if not entries:
+            logger.warning(f"No entries were generated for event {event}")
+        
+        return entries
 
     @transaction.atomic
     def process_events(self, events: List[BaseEvent]) -> Dict[Account, List]:
+        logger.info(f"Processing {len(events)} events")
         results: Dict[Account, List] = {}
         for event in tqdm(events, miniters=10):
             account = event.account
-            lines = self.process_event(event)
-            if lines:
+            entries = self.process_event(event)
+            if entries:
                 if account not in results:
                     results[account] = []
-                results[account].extend(lines)
+                results[account].extend(entries)
         return results
 
 def create_default_engine() -> RuleEngine:
