@@ -5,6 +5,7 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 import click
 from loguru import logger
+from tqdm import tqdm
 import sys
 import uuid
 
@@ -26,6 +27,8 @@ class Command(BaseCommand):
                           help='Export invoices to text files')
         parser.add_argument('--group-entries', action='store_true',
                           help='Group entries by type in export')
+        parser.add_argument('--delete-drafts', action='store_true',
+                            help='Delete draft invoices before export')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -34,6 +37,10 @@ class Command(BaseCommand):
         run_uuid = uuid.uuid4().hex[:4]
 
         logger.info(f"Generating invoices for uninvoiced events, run {run_uuid}")
+
+        if options['delete_drafts']:
+            logger.info("Deleting existing draft invoices")
+            Invoice.objects.filter(status=Invoice.Status.DRAFT).delete()
 
         try:
             # Parse dates if provided
@@ -80,7 +87,7 @@ class Command(BaseCommand):
             total = Decimal('0')
 
             # Create actual invoices
-            for account in accounts_with_outstanding_balances:
+            for account in tqdm(accounts_with_outstanding_balances):
 
                 # Create invoice
                 invoice = Invoice.objects.create(
@@ -126,18 +133,20 @@ class Command(BaseCommand):
                         entry.invoices.add(invoice)
                 
 
-                self.stdout.write(
+                logger.debug(
                     f"Created invoice {invoice.number} for {account.id} with {len(uninvoiced_entries)} entries"
                 )
 
                 if options['export']:
                     total += self.export_invoice(invoice)
-                    self.stdout.write(f"Exported invoice to output/{account.id}.txt")
+                    logger.debug(f"Exported invoice to output/{account.id}.txt")
             
             logger.info(f"Total invoiced: {total} EUR")
 
         except Exception as e:
             logger.exception(f"Error creating invoices: {str(e)}")
+            if self.options.get('delete_drafts'):
+                logger.error("Rolling back transaction and restoring draft invoices")
             raise
 
     def export_invoice(self, invoice):
