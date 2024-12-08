@@ -1,3 +1,9 @@
+# Really required
 django
 loguru
 tqdm
+
+# Google APIs for sending emails
+google-auth
+google-auth-httplib2
+google-api-python-client

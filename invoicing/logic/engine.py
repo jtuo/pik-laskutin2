@@ -38,7 +38,7 @@ class RuleEngine:
     def process_events(self, events: List[BaseEvent]) -> Dict[Account, List]:
         logger.info(f"Processing {len(events)} events")
         results: Dict[Account, List] = {}
-        for event in tqdm(events, miniters=10):
+        for event in tqdm(events, miniters=10, desc='Processing events'):
             account = event.account
             entries = self.process_event(event)
             if entries:

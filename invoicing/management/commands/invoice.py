@@ -13,6 +13,8 @@ from operations.models import BaseEvent, Flight
 from invoicing.logic.engine import create_default_engine
 from invoicing.logic.accounting import AccountBalance
 
+from config import Config
+
 class Command(BaseCommand):
     help = 'Generate invoices for uninvoiced events'
 
@@ -67,8 +69,11 @@ class Command(BaseCommand):
             total = Decimal('0')
 
             # Create actual invoices
-            for account, balance_entries, balance in tqdm(accounts_with_outstanding_balances):
-
+            for account, balance_entries, balance in tqdm(
+                accounts_with_outstanding_balances,
+                desc='Generating invoices',
+                ):
+                
                 # Create invoice
                 invoice = Invoice.objects.create(
                     account=account,
@@ -95,6 +100,7 @@ class Command(BaseCommand):
                         # This is because "non-additive" entries SET the balance to a specific value 
                         # Because of this, earlier entries should not be included in the invoice
                         # Otherwise, they contribute to the total of the invoice, which is incorrect
+                        # It is a bit questionable if we want to even have such entries in the system
                         if not balance_entry.entry.additive:
                             break
 
@@ -153,7 +159,7 @@ class Command(BaseCommand):
             os.makedirs(output_dir)
 
         filename = os.path.join(output_dir, f"{invoice.account.id}.txt")
-        content = invoice.render_to_string()
+        content = invoice.render(Config.INVOICE_TEMPLATE)
         
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(content)
