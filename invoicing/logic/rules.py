@@ -263,7 +263,7 @@ class MemberListFilter(object):
         if not matches:
             logger.debug(f"MemberListFilter failed: member {member_id} {'not in' if self.whitelist_mode else 'in'} list of {len(self.member_ids)} members")
         else:
-            logger.info(f"MemberListFilter passed: member {member_id} {'in' if self.whitelist_mode else 'not in'} list")
+            logger.debug(f"MemberListFilter passed: member {member_id} {'in' if self.whitelist_mode else 'not in'} list")
         return matches
             
     def __str__(self):

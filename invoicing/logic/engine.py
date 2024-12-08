@@ -4,6 +4,7 @@ from invoicing.models import Account, AccountEntry
 from typing import List, Dict
 from config import Config
 from loguru import logger
+from tqdm import tqdm
 
 class RuleEngine:
     def __init__(self):
@@ -32,7 +33,7 @@ class RuleEngine:
     @transaction.atomic
     def process_events(self, events: List[BaseEvent]) -> Dict[Account, List]:
         results: Dict[Account, List] = {}
-        for event in events:
+        for event in tqdm(events, miniters=10):
             account = event.account
             lines = self.process_event(event)
             if lines:
