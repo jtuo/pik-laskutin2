@@ -15,6 +15,7 @@ class Command(BaseCommand):
         parser.add_argument('filename', type=str, help='Path to the CSV file')
         parser.add_argument('--force', action='store_true', help='Force import even if some entries fail, does not import duplicates')
         parser.add_argument('--force-duplicates', action='store_true', help='Force import even if some entries are duplicates')
+        parser.add_argument('--create-accounts', action='store_true', help='Create new accounts if not found')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -58,8 +59,14 @@ class Command(BaseCommand):
                         except Account.DoesNotExist:
                             if not options['force']:
                                 raise ValueError(f"Account with reference ID {row[1]} not found")
-                            logger.warning(f"Account with reference ID {row[1]} not found, creating new account!")
-                            account = Account.objects.create(id=row[1])
+                            if options['create_accounts']:
+                                logger.warning(f"Account with reference ID {row[1]} not found, creating new account!")
+                                account = Account.objects.create(id=row[1])
+                            else:
+                                if not options['force']:
+                                    raise ValueError(f"Account with reference ID {row[1]} not found")
+                                logger.warning(f"Skipping row {reader.line_num}: Account with reference ID {row[1]} not found")
+                                continue
 
                         # Parse balance amount
                         try:
