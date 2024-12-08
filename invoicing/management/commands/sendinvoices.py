@@ -69,7 +69,7 @@ class Command(BaseCommand):
                 }
 
                 message['subject'] = Config.EMAIL_SUBJECT.format(**invoice_data)
-                message['from'] = Config.SENDER_ACCOUNT
+                message['from'] = Config.SENDER_FROM
                 message['reply-to'] = Config.REPLY_TO
 
                 # Encode the message
