@@ -1,12 +1,9 @@
-Invoice {{ invoice.number }}
-Account: {{ invoice.account.id }} - {{ invoice.account.name }}
-Date: {{ invoice.created_at|date:"d.m.Y"|default:"N/A" }}
-Due date: {{ invoice.due_date|date:"d.m.Y"|default:"N/A" }}
+Viitenumero: {{ invoice.account.member.id }}
+Päivämäärä: {{ invoice.created_at|date:"d.m.Y"|default:"N/A" }}
 
-Items:
+Tapahtumien erittely:
 ------------------------------------------------------------
 {% for entry in entries %}{{ entry.date|date:"d.m.Y" }} {{ entry.amount|floatformat:2|rjust:8 }} EUR - {{ entry.description|safe }}
-{% endfor %}
-------------------------------------------------------------
+{% endfor %}------------------------------------------------------------
 
-Maksettavaa: {{ total|floatformat:2 }} EUR
+Yhteensä: {{ total|floatformat:2 }} EUR
