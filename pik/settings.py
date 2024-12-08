@@ -12,13 +12,14 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from loguru import logger
+from tqdm import tqdm
 import sys
 
 # Remove the default console handler
 # And setup console output for info and above
 logger.remove()
 logger.add(
-    sys.stderr,
+    lambda msg: tqdm.write(msg, end=""),
     format="<level>{level: <7}</level> | <level>{message}</level>",
     level="INFO",
     colorize=True
