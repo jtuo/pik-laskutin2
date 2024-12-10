@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django.contrib import messages
 from django.utils.html import format_html
+from django.http import HttpResponse
+from django.urls import path
 from .models import Account, AccountEntry, AccountEntryTag, Invoice
+from config import Config
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
@@ -122,7 +125,7 @@ class AccountEntryTagAdmin(admin.ModelAdmin):
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ('number', 'account', 'created_at', 'due_date', 'status', 'total_amount')
+    list_display = ('number', 'account', 'created_at', 'due_date', 'status', 'total_amount', 'view_invoice_button')
     list_filter = ('status', 'created_at')
     search_fields = ('number', 'account__name', 'notes')
     date_hierarchy = 'created_at'
@@ -131,3 +134,28 @@ class InvoiceAdmin(admin.ModelAdmin):
     def total_amount(self, obj):
         return obj.total_amount
     total_amount.short_description = 'Total Amount'
+
+    def view_invoice_button(self, obj):
+        return format_html(
+            '<a class="button" href="{}">View Invoice</a>',
+            f'view-invoice/{obj.pk}/'
+        )
+    view_invoice_button.short_description = 'View'
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'view-invoice/<int:invoice_id>/',
+                self.admin_site.admin_view(self.view_invoice),
+                name='view-invoice',
+            ),
+        ]
+        return custom_urls + urls
+
+    def view_invoice(self, request, invoice_id):
+        invoice = Invoice.objects.get(pk=invoice_id)
+        content = invoice.render(Config.INVOICE_TEMPLATE)
+        response = HttpResponse(content.encode('utf-8'), content_type='text/plain; charset=utf-8')
+        response['Content-Disposition'] = f'inline; filename="invoice_{invoice.number}.txt"'
+        return response
