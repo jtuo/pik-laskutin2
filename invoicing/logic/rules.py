@@ -434,7 +434,7 @@ class CappedRule(BaseRule):
             if accumulated >= self.cap_price:
                 if self.drop_over_cap:
                     logger.debug(f"Dropping entry '{entry.description}' (price={entry.amount}) - already at cap ({self.cap_price})")
-                    entry.delete()
+                    entry.visible = False
                 logger.debug(f"Converting entry '{entry.description}' from {entry.amount} to zero price due to cap")
                 entry.description += ", " + self.cap_description
                 entry.amount = Decimal('0')
@@ -445,7 +445,6 @@ class CappedRule(BaseRule):
 
             # Add the cap tag to track this entry
             entry.tags.create(value=f"cap:{self.cap_id}")
-
             entry.save()
             yield entry
 

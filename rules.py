@@ -149,7 +149,7 @@ def make_rules():
                    AllRules([FlightRule(Decimal('10'), ACCT_KALUSTO, F_PURTSIKKA,
                                     "Kalustomaksu {aircraft}, {duration} min"),
                             FlightRule(Decimal('10'), ACCT_KALUSTO, F_MOTTI,
-                                    "Kalustomaksu {aircraft}, {duration} min")])),
+                                    "Kalustomaksu {aircraft}, {duration} min")]), drop_over_cap=True),
 
         FlightRule(lambda ev: Decimal('2'), ACCT_LASKUTUSLISA, F_KAIKKI_KONEET + F_LASKUTUSLISA, "Laskutuslisä {aircraft}, {surcharge_reason}")
     ]

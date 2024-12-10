@@ -120,6 +120,7 @@ class AccountEntry(models.Model):
     )
     created_at = models.DateTimeField(default=timezone.now)
     metadata = models.JSONField(null=True, blank=True)
+    visible = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'account_entries'
@@ -278,7 +279,7 @@ class Invoice(models.Model):
         """Render invoice to string format using Django templates"""
         context = Context({
             'invoice': self,
-            'entries': self.entries.order_by('date'),
+            'entries': self.entries.filter(visible=True).order_by('date'),
             'total': self.total_amount
         })
         return Template(template).render(context)
