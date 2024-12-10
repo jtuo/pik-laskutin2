@@ -73,6 +73,9 @@ class Command(BaseCommand):
                 accounts_with_outstanding_balances,
                 desc='Generating invoices',
                 ):
+
+                # Filter out entries that have visibility set to False
+                balance_entries = [entry for entry in balance_entries if entry.entry.visible]
                 
                 # Create invoice
                 invoice = Invoice.objects.create(
@@ -135,7 +138,8 @@ class Command(BaseCommand):
                     else:
                         logger.error(
                             "The logic of the accounting system is flawed. Please investigate.",
-                            "Contact the 'developers', or better yet, fix it yourself :D"
+                            "Contact the 'developers', or better yet, fix it yourself :D",
+                            "This can also happen if there are entries in the invoice with visible=False."
                         )
                         raise ValueError(
                             f"Total amount of invoice {invoice.number} ({invoice.total_amount}) "

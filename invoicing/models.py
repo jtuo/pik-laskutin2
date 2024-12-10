@@ -279,7 +279,7 @@ class Invoice(models.Model):
         """Render invoice to string format using Django templates"""
         context = Context({
             'invoice': self,
-            'entries': self.entries.filter(visible=True).order_by('date'),
+            'entries': self.entries.order_by('date'),
             'total': self.total_amount
         })
         return Template(template).render(context)
