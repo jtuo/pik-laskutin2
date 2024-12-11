@@ -23,6 +23,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('account_id', nargs='?', type=str, help='Account ID to invoice')
         parser.add_argument('--all-accounts', action='store_true', help='Invoice all accounts with uninvoiced entries')
+        parser.add_argument('--ignore-missing-emails', action='store_true', help='Ignore accounts with missing email addresses')
 
     def handle(self, *args, **options):
         if options['account_id']:
@@ -54,8 +55,12 @@ class Command(BaseCommand):
             with transaction.atomic():
                 logger.info(f'Sending invoice {invoice.id} for account {invoice.account.id}')
 
-                if not invoice.account.member.email:
-                    raise ValueError(f'Account {invoice.account.id} has no email address')
+                if not invoice.account.member or not invoice.account.member.email:
+                    if options['ignore_missing_emails']:
+                        logger.warning(f'Account {invoice.account.id} has no email address, skipping')
+                        continue
+                    else:
+                        raise ValueError(f'Account {invoice.account.id} has no email address')
 
                 body = invoice.render(Config.INVOICE_TEMPLATE)
 
