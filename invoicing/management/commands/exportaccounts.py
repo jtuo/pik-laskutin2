@@ -23,13 +23,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         '''Export all Accounts and their balances as .csv
         Rows:
-        - Tosite
-        - Päivämäärä
-        - Nro
         - Tili
-        - Debet
-        - Kredit
-        - Selite
+        - Nimi
+        - Saldo
+        - Erääntynyt
+        - Viimeisin maksu
         '''
         filename = options['filename']
         valid_only = options['valid_only']
@@ -64,6 +62,5 @@ class Command(BaseCommand):
                     account.overdue_since.strftime('%d.%m.%Y') if account.overdue_since else "-",
                     account.last_payment.strftime('%d.%m.%Y') if account.last_payment else "-"
                 ])
-
 
         logger.info(f"Exported {len(accounts)} entries to {filename}")
