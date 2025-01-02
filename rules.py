@@ -15,12 +15,12 @@ def make_rules():
 
     ACCT_PURSI_KEIKKA = 3220
     ACCT_TOW = 3130
-    ACCT_1037 = 3150 # Lentotuntitulot jäseniltä
-    ACCT_1037_OPEALE = 3150 # Lentotuntitulot jäseniltä
-    ACCT_TOWING = 3170 # Muut lentotoiminnan tulot
-    ACCT_PURSI_INSTRUCTION = 3470 # Muut tulot koulutustoiminnasta
+    ACCT_1037 = 3150
+    ACCT_1037_OPEALE = 3150
+    ACCT_TOWING = 3170
+    ACCT_PURSI_INSTRUCTION = 3470
     ACCT_KALUSTO = 3010
-    ACCT_LASKUTUSLISA = 3610 # Hallinnon tulot
+    ACCT_LASKUTUSLISA = 3610
 
     ID_PURSI_CAP_2024 = f"pursi_hintakatto_{YEAR}"
     ID_KALUSTOMAKSU_CAP_2024 = f"kalustomaksu_hintakatto_{YEAR}"
