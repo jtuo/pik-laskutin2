@@ -39,27 +39,32 @@ class Account(models.Model):
         return balance
 
     @property
-    def last_overdue(self) -> Optional[date]:
+    def overdue_since(self) -> Optional[date]:
         return AccountBalance(self).get_last_non_overdue_date()
     
     @property
     def days_overdue(self):
-        last_overdue = self.last_overdue
-        if not last_overdue: return None
-        return (timezone.now().date() - last_overdue).days
+        overdue_since = self.overdue_since
+        if not overdue_since: return None
+        return (timezone.now().date() - overdue_since).days
     
     @property
-    def days_since_last_payment(self):
-        """Calculate days since last payment (negative entries with 'Maksu' in description)"""
+    def last_payment(self):
+        """Get the date of the last payment (negative entries with 'Maksu' in description)"""
         last_payment = self.entries.filter(
             description__icontains='Maksu',
             amount__lt=0  # Only negative amounts are payments
         ).order_by('-date').first()
         
-        if not last_payment:
-            return None
+        return last_payment.date if last_payment else None
+    
+    @property
+    def days_since_last_payment(self):
+        """Calculate days since last payment (negative entries with 'Maksu' in description)"""
+        last_payment = self.last_payment
+        if not last_payment: return None
             
-        return (timezone.now().date() - last_payment.date).days
+        return (timezone.now().date() - last_payment).days
 
 class QuantizedDecimalField(models.DecimalField):
     def __init__(self, *args, **kwargs):
