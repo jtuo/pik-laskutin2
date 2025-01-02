@@ -99,7 +99,7 @@ class Command(BaseCommand):
                                     timezone=ZoneInfo('Europe/Helsinki')
                                 ),
                                 amount=amount,
-                                description="Maksu",
+                                description="Lentotilimaksu",
                                 metadata={
                                     "nda": {
                                         'unique_identifier': txn.unique_identifier,
