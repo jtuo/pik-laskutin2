@@ -51,7 +51,8 @@ class Command(BaseCommand):
 
         required_columns = {
             'Selite', 'Tapahtumapäivä', 'Maksajan viitenumero',
-            'Lähtöaika', 'Laskeutumisaika', 'Lentoaika_desimaalinen'
+            'Lähtöaika', 'Laskeutumisaika', 'Lentoaika_desimaalinen',
+            'Laskuja'
         }
 
         with open(filename, 'r', encoding='utf-8') as csvfile:
@@ -152,6 +153,19 @@ class Command(BaseCommand):
                     # Check for required locations when not using force
                     takeoff_location = row.get('Lähtöpaikka')
                     landing_location = row.get('Laskeutumispaikka')
+
+                    # There must be at least one landing
+                    try:
+                        landing_count = int(row.get('Laskuja'))
+                    except Exception:
+                        raise ValueError(f"Error parsing landing count in row:\n{row}")
+
+                    if landing_count < 1:
+                        raise ValueError(
+                            f"Flight with less than one landing:\n"
+                            f"{row}\n"
+                            f"  Landings: {landing_count}"
+                        )
                     
                     # Verify locations
                     if not takeoff_location or not landing_location:
@@ -197,7 +211,8 @@ class Command(BaseCommand):
                         'surcharge_reason': row.get('Laskutuslisä syy'),
                         'purpose': row.get('Tarkoitus'),
                         'takeoff_location': row.get('Lähtöpaikka'),
-                        'landing_location': row.get('Laskeutumispaikka')
+                        'landing_location': row.get('Laskeutumispaikka'),
+                        'landing_count': landing_count,
                     }
 
                     # Apply any metadata overrides

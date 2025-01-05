@@ -55,6 +55,8 @@ class Flight(BaseEvent):
     takeoff_location = models.CharField(max_length=50, blank=True, null=True)
     landing_location = models.CharField(max_length=50, blank=True, null=True)
 
+    landing_count = models.PositiveIntegerField(default=1)
+
     duration = models.DecimalField(max_digits=5, decimal_places=2)
     purpose = models.CharField(max_length=10, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
