@@ -27,6 +27,16 @@ class Command(BaseCommand):
             action='store_true',
             help='Allow non-Finnish ICAO codes (default: only allow EF** and maasto)'
         )
+        parser.add_argument(
+            '--assume-one-landing',
+            action='store_true',
+            help='If landing count is not specified or cannot be parsed, assume one landing'
+        )
+        parser.add_argument(
+            '--allow-duration-mismatch',
+            action='store_true',
+            help='Allow duration mismatch between takeoff/landing times and reported duration'
+        )
 
     def parse_time(self, time_str, date_str):
         """Helper function to parse time with different formats"""
@@ -127,13 +137,17 @@ class Command(BaseCommand):
 
                     # Sanity check the times
                     if landing_time < takeoff_time:
-                        raise ValueError(
+                        msg = (
                             f"Landing time before takeoff time:\n"
                             f"{row}\n"
                             f"  Takeoff: {takeoff_time}\n"
                             f"  Landing: {landing_time}"
                         )
-                    
+                        if not options['force']:
+                            raise ValueError(msg)
+                        else:
+                            logger.warning(msg)
+
                     if landing_time - takeoff_time < timedelta(minutes=1):
                         # This might not be wrong, but it's suspicious
                         logger.warning(
@@ -141,25 +155,31 @@ class Command(BaseCommand):
                             f"{row}\n"
                             f"  Duration: {landing_time - takeoff_time}"
                         )
-                    
+
                     # If the flight is in the future?
                     if date > timezone.now():
-                        raise ValueError(
+                        msg = (
                             f"Flight date in the future:\n"
                             f"{row}\n"
                             f"  Flight date: {date}"
                         )
-                    
+                        if not options['force']:
+                            raise ValueError(msg)
+                        else:
+                            logger.warning(msg)
+
                     # Does the landing_time and takeoff_time match the duration?
                     duration = Decimal(row['Lentoaika_desimaalinen'])
+
                     time_difference = landing_time - takeoff_time
                     actual_duration = Decimal(time_difference.total_seconds()) / 60
 
-                    if actual_duration != duration:
+                    # We can allow the mismatch if the purpose of the flight is HIN (towing)
+                    if row['Tarkoitus'] != 'HIN' and actual_duration != duration:
                         msg = (
                             f"Duration mismatch in row:\n"
                             f"{row}\n"
-                            f"  Calculated duration: {actual_duration} minutes\n"
+                            f"  Calculated duration (landing - takeoff): {actual_duration} minutes\n"
                             f"  Reported duration: {duration} minutes"
                         )
                         if not options['force']:
@@ -173,16 +193,23 @@ class Command(BaseCommand):
 
                     # There must be at least one landing
                     try:
-                        landing_count = int(row.get('Laskuja'))
-                    except Exception:
-                        raise ValueError(f"Error parsing landing count in row:\n{row}")
-
-                    if landing_count < 1:
-                        raise ValueError(
-                            f"Flight with less than one landing:\n"
-                            f"{row}\n"
-                            f"  Landings: {landing_count}"
-                        )
+                        landing_count = int(row.get('Laskuja', 0))
+                        if landing_count < 1:
+                            if options['assume_one_landing']:
+                                logger.warning(f"Assuming one landing for row with {landing_count} landings:\n{row}")
+                                landing_count = 1
+                            else:
+                                raise ValueError(
+                                    f"Flight with less than one landing:\n"
+                                    f"{row}\n"
+                                    f"  Landings: {landing_count}"
+                                )
+                    except ValueError:
+                        if options['assume_one_landing'] or options['force']:
+                            logger.warning(f"Could not parse landing count, assuming one landing:\n{row}")
+                            landing_count = 1
+                        else:
+                            raise ValueError(f"Error parsing landing count in row:\n{row}")
                     
                     # Verify locations
                     if not takeoff_location or not landing_location:
