@@ -149,6 +149,23 @@ class Command(BaseCommand):
                             f"{row}\n"
                             f"  Flight date: {date}"
                         )
+                    
+                    # Does the landing_time and takeoff_time match the duration?
+                    duration = Decimal(row['Lentoaika_desimaalinen'])
+                    time_difference = landing_time - takeoff_time
+                    actual_duration = Decimal(time_difference.total_seconds()) / 60
+
+                    if actual_duration != duration:
+                        msg = (
+                            f"Duration mismatch in row:\n"
+                            f"{row}\n"
+                            f"  Calculated duration: {actual_duration} minutes\n"
+                            f"  Reported duration: {duration} minutes"
+                        )
+                        if not options['force']:
+                            raise ValueError(msg)
+                        else:
+                            logger.warning(msg)
 
                     # Check for required locations when not using force
                     takeoff_location = row.get('Lähtöpaikka')
@@ -204,7 +221,7 @@ class Command(BaseCommand):
                         'reference_id': reference_id,
                         'aircraft': aircraft,
                         'account': account,
-                        'duration': Decimal(row['Lentoaika_desimaalinen']),
+                        'duration': duration,
                         'notes': '\n'.join(notes_parts) if notes_parts else None,
                         'captain': captain,
                         'passengers': passengers,
