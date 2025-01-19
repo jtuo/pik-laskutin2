@@ -69,10 +69,14 @@ class AccountBalance:
         if balances[-1].balance <= 0:
             return None
             
-        # Find the last date where balance was <= 0
+        # Find the last date that broke the positive balance
+        last_date = None
         for balance_entry in reversed(balances):
+            # In case all balances are positive, we never break out of the loop
             if balance_entry.balance <= 0:
-                return balance_entry.date
-                
-        # If we never had a non-positive balance, return the first entry date
-        return balances[0].date
+                break
+            
+            # In that case, this sets last_date to the first entry's date
+            last_date = balance_entry.date
+        
+        return last_date
