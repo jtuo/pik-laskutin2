@@ -69,9 +69,9 @@ class AccountBalance:
         if balances[-1].balance <= 0:
             return None
             
-        # Find the last date where balance was <= 0
-        for balance_entry in reversed(balances):
-            if balance_entry.balance <= 0:
+        # Find the date of the first entry where balance was > 0
+        for balance_entry in balances:
+            if balance_entry.balance > 0:
                 return balance_entry.date
                 
         # If we never had a non-positive balance, return the first entry date
