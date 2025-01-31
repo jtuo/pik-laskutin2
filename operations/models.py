@@ -38,8 +38,23 @@ class BaseEvent(models.Model):
     date = models.DateField(db_index=True)
     created_at = models.DateTimeField(default=timezone.now)
 
+    # Used to refund events in case of errors
+    # If this event is incorrect, the refund entry will point to an AccountEntry
+    # The AccountEntry fully refunds all charges related to this event
+    refund_entry = models.ForeignKey(
+        'invoicing.AccountEntry',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='refunded_events'
+    )
+
     class Meta:
         db_table = 'events'
+    
+    @property
+    def has_been_refunded(self):
+        return self.refund_entry is not None
 
 class Flight(BaseEvent):
     takeoff_time = models.DateTimeField()

@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from .models import Aircraft, Flight
+from invoicing.logic.engine import create_default_engine
 
 @admin.register(Aircraft)
 class AircraftAdmin(admin.ModelAdmin):
@@ -17,11 +18,47 @@ class FlightAdmin(admin.ModelAdmin):
         'airfields',
         'duration_display',
         'purpose',
-        'captain'
+        'captain',
+        'refund_status'  # Added refund status indicator
     )
     list_filter = ('aircraft', 'purpose', 'date')
     search_fields = ('reference_id', 'notes', 'captain', 'passengers')
     date_hierarchy = 'date'
+    actions = ['refund_events', 'remove_refunds']
+
+    def refund_events(self, request, queryset):
+        """Create refund entries for selected events"""
+        engine = create_default_engine()
+        refunded = 0
+        for event in queryset:
+            if engine.refund_event(event):
+                refunded += 1
+        self.message_user(request, f'Successfully refunded {refunded} events.')
+    refund_events.short_description = 'Create refund entries for selected events'
+
+    def remove_refunds(self, request, queryset):
+        """Remove refund entries from selected events"""
+        removed = 0
+        for event in queryset:
+            if event.has_been_refunded:
+                # Delete the refund entry
+                event.refund_entry.delete()
+                event.refund_entry = None
+                event.save()
+                removed += 1
+        self.message_user(request, f'Successfully removed refunds from {removed} events.')
+    remove_refunds.short_description = 'Remove refund entries from selected events'
+
+    def refund_status(self, obj):
+        """Display refund status with color coding"""
+        if obj.has_been_refunded:
+            return format_html(
+                '<span style="color: #c41e3a;">Refunded</span>'
+            )
+        return format_html(
+            '<span style="color: #2e8b57;">Active</span>'
+        )
+    refund_status.short_description = 'Status'
 
     def flight_times(self, obj):
         """Format takeoff and landing times nicely"""
