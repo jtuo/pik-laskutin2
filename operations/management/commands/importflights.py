@@ -266,7 +266,7 @@ class Command(BaseCommand):
 
                     existing = Flight.objects.filter(
                         aircraft=flight.aircraft,
-                        date__date=flight.date.date(),
+                        date=flight.date,
                     ).filter(
                         Q(takeoff_time=flight.takeoff_time) | 
                         Q(landing_time=flight.landing_time)

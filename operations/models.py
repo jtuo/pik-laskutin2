@@ -35,7 +35,7 @@ class BaseEvent(models.Model):
     )
     
     reference_id = models.CharField(max_length=20, db_index=True, null=True)
-    date = models.DateTimeField(db_index=True)
+    date = models.DateField(db_index=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -81,4 +81,4 @@ class Flight(BaseEvent):
         ]
 
     def __str__(self):
-        return f"<Flight {self.reference_id} on {self.date}>"
+        return f"<Lento {self.aircraft} - {self.date.strftime('%d.%m.%Y')}>"
