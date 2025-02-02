@@ -31,6 +31,8 @@ class Command(BaseCommand):
                             help='Only invoice entries that have not been invoiced yet')
         parser.add_argument('--dry-run', action='store_true',
                             help='Database changes are rolled back after processing')
+        parser.add_argument('--valid-accounts-only', action='store_true',
+                            help='Only process accounts with an associated member')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -52,6 +54,9 @@ class Command(BaseCommand):
                 accounts = Account.objects.filter(id=options['account_id'])
             else:
                 accounts = Account.objects.all()
+
+            if options['valid_accounts_only']:
+                accounts = accounts.filter(member__isnull=False)
             
             if options['uninvoiced_entries_only']:
                 for account in accounts:
