@@ -420,11 +420,9 @@ class CappedRule(BaseRule):
         self.cap_description = cap_description + f" ({self.cap_price}€)"
 
     def get_accumulated_amount(self, account):
-        # Get all entries for this cap in the current year
-        year = timezone.now().year
+        # Get all entries for this cap
         return AccountEntry.objects.filter(
             account=account,
-            date__year=year,
             tags__value=f"cap:{self.cap_id}"
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
