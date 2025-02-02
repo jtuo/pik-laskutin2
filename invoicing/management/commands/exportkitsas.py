@@ -35,9 +35,8 @@ class Command(BaseCommand):
         '''
         filename = options['filename']
 
-        # Query AccountEntries, optionally filtered by year and amount
-        # Only export entries with amount >= 0
-        entries = AccountEntry.objects.filter(amount__gte=0).order_by('date', 'id')
+        # Query AccountEntries, optionally filtered by year
+        entries = AccountEntry.objects.order_by('date', 'id')
 
         if options.get('year'):
             entries = entries.filter(date__year=options['year'])
@@ -53,41 +52,49 @@ class Command(BaseCommand):
 
         # Write to CSV file
         with open(filename, 'w', encoding='utf-8', newline='') as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f, delimiter=';')
             
             # Write header
             writer.writerow(['Tosite', 'Päivämäärä', 'Nro', 'Tili', 'Debet', 'Kredit', 'Selite'])
             
             # Write entries
             for entry in entries:
+                if not entry.ledger_account_id:
+                    logger.warning(f"Skipping entry {entry} with no ledger account")
+                    continue
+
                 if entry.ledger_account_id not in Config.LEDGER_ACCOUNT_MAP:
                     logger.error(f"Skipping entry {entry.id} with unknown ledger account {entry.ledger_account_id}")
                     logger.error(f"{entry}, {entry.description}")
                     logger.error(f"Please add ledger account {entry.ledger_account_id} to config.LEDGER_ACCOUNT_MAP")
                 
-                # Format amount like: XX.XX
-                amount = f'{entry.amount:.2f}'
+                # Format amount as absolute value like: XX,XX
+                amount = f'{abs(entry.amount):.2f}'.replace('.', ',')
 
-                # First row
+                # First row - receivables account
+                # For positive amounts: Debit entry.amount, Credit 0
+                # For negative amounts: Debit 0, Credit entry.amount
                 writer.writerow([
                     entry.id,
                     entry.date.strftime('%d.%m.%Y'),  # Format as DD.MM.YYYY
                     "1422",
                     "Saamiset jäseniltä",
-                    amount,
-                    "",
+                    amount if entry.amount > 0 else "",
+                    amount if entry.amount < 0 else "",
                     f'Lentolasku, {entry.account.id}: {entry.description}'
                 ])
 
-                # Second row
+                # Second row - contra account
+                # For positive amounts: Debit 0, Credit entry.amount
+                # For negative amounts: Debit entry.amount, Credit 0
                 writer.writerow([
                     entry.id,
                     entry.date.strftime('%d.%m.%Y'),  # Format as DD.MM.YYYY
                     entry.ledger_account_id,
                     Config.LEDGER_ACCOUNT_MAP[entry.ledger_account_id]
                     if entry.ledger_account_id in Config.LEDGER_ACCOUNT_MAP else "",
-                    "",
-                    amount,
+                    amount if entry.amount < 0 else "",
+                    amount if entry.amount > 0 else "",
                     f'Lentolasku, {entry.account.id}: {entry.description}'
                 ])
 
