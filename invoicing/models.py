@@ -33,10 +33,15 @@ class Account(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
+    def compute_balance(self, end_date: Optional[date] = None) -> Decimal:
+        """Calculate account balance optionally up to a specific date (inclusive)"""
+        _, balance = AccountBalance(self).compute(until_date=end_date)
+        return balance
+
     @property
     def balance(self) -> Decimal:
-        _, balance = AccountBalance(self).compute()
-        return balance
+        """Get current account balance"""
+        return self.compute_balance()
 
     @property
     def overdue_since(self) -> Optional[date]:
