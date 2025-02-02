@@ -10,6 +10,7 @@ from invoicing.io.nda import NDAFileParser
 from config import Config
 import glob
 import os
+import csv
 
 class Command(BaseCommand):
     help = 'Export all AccountEntries as .csv'
@@ -58,24 +59,26 @@ class Command(BaseCommand):
             os.makedirs(dirname, exist_ok=True)
         
         # Write to CSV file
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(filename, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.writer(f, delimiter=';')
+            
             # Write header
             header = ['Date', 'Account ID', 'Description', 'Amount']
             if options.get('year'):
                 header.append('Year')
-            f.write(','.join(header) + '\n')
+            writer.writerow(header)
             
             # Write entries
             for entry in entries:
                 row = [
                     entry.date.strftime('%Y-%m-%d'),
                     entry.account_id,
-                    f'"{entry.description}"',  # Quote description to handle commas
-                    str(entry.amount)
+                    entry.description,
+                    f'{entry.amount:.2f}'.replace('.', ',')  # Format with comma decimal separator
                 ]
                 if options.get('year'):
                     row.append(str(entry.date.year))
-                f.write(','.join(row) + '\n')
+                writer.writerow(row)
         
         logger.info(f"Exported {entries.count()} entries to {filename}")
 
