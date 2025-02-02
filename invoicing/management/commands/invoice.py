@@ -33,6 +33,8 @@ class Command(BaseCommand):
                             help='Database changes are rolled back after processing')
         parser.add_argument('--valid-accounts-only', action='store_true',
                             help='Only process accounts with an associated member')
+        parser.add_argument('--minimum-balance', type=float,
+                            help='Minimum balance for an account to be invoiced')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -54,7 +56,7 @@ class Command(BaseCommand):
                 accounts = Account.objects.filter(id=options['account_id'])
             else:
                 accounts = Account.objects.all()
-
+                
             if options['valid_accounts_only']:
                 accounts = accounts.filter(member__isnull=False)
             
@@ -78,6 +80,11 @@ class Command(BaseCommand):
                 accounts_with_outstanding_balances,
                 desc='Generating invoices',
                 ):
+                
+                # Skip accounts with balance below minimum if set
+                if options['minimum_balance'] and balance < Decimal(str(options['minimum_balance'])):
+                    logger.warning(f"Skipping account {account.id} with balance {balance} (below minimum {options['minimum_balance']})")
+                    continue
 
                 # Filter out entries that have visibility set to False
                 balance_entries = [entry for entry in balance_entries if entry.entry.visible]
