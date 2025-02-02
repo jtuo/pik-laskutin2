@@ -70,9 +70,15 @@ class Command(BaseCommand):
 
                         # Parse balance amount
                         try:
-                            balance = Decimal(row[3])
+                            # Normalize balance string: replace special minus, remove spaces, and replace comma
+                            balance_str = (row[3]
+                                         .strip()  # Remove any leading/trailing whitespace
+                                         .replace('−', '-')  # Replace special minus
+                                         .replace(' ', '')  # Remove special spaces
+                                         .replace(',', '.'))  # Replace decimal separator
+                            balance = Decimal(balance_str)
                         except (decimal_InvalidOperation, ValueError) as e:
-                            raise ValueError(f"Error parsing balance '{row[3]}': {str(e)}")
+                            raise ValueError(f"Error parsing balance '{row[3]}': {str(e)}, Normalized: '{balance_str}'")
                         
                         # Check for duplicates
                         if AccountEntry.objects.filter(
