@@ -178,7 +178,7 @@ class AccountEntry(models.Model):
         return self.force_balance is not None
 
     def __str__(self):
-        return f"<AccountEntry {self.date}: {self.amount}>"
+        return f"<Tilitapahtuma {self.date}: {self.amount} - {self.description}>"
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -290,7 +290,7 @@ class Invoice(models.Model):
         return Template(template).render(context)
 
     def __str__(self):
-        return f"<Invoice {self.number}: {self.status}>"
+        return f"<Lasku {self.number}: {self.status}>"
 
     def save(self, *args, **kwargs):
         self.full_clean()
