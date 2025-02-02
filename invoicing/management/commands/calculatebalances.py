@@ -8,16 +8,8 @@ class Command(BaseCommand):
     help = 'Calculate and display account balance totals'
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            '--end-date',
-            type=str,
-            help='Calculate balances up to this date (inclusive, YYYY-MM-DD)',
-        )
-        parser.add_argument(
-            '--year',
-            type=int,
-            help='Calculate balances up to the end of specified year',
-        )
+        parser.add_argument('--end-date', type=str, help='Calculate balances up to this date (inclusive, YYYY-MM-DD)')
+        parser.add_argument('--year', type=int, help='Calculate balances up to the end of specified year')
 
     def handle(self, *args, **options):
         end_date = None
@@ -25,13 +17,11 @@ class Command(BaseCommand):
         # Parse end date from arguments
         if options.get('year'):
             end_date = datetime(options['year'], 12, 31).date()
-            logger.debug(f"Using year end date: {end_date}")
         elif options.get('end_date'):
             try:
                 end_date = datetime.strptime(options['end_date'], '%Y-%m-%d').date()
-                logger.debug(f"Using specified end date: {end_date}")
             except ValueError:
-                self.stderr.write('Invalid date format. Please use YYYY-MM-DD')
+                logger.error('Invalid date format. Please use YYYY-MM-DD')
                 return
 
         # Query all accounts
@@ -41,9 +31,6 @@ class Command(BaseCommand):
         total_balance = Decimal('0.00')
         total_debt = Decimal('0.00')
         total_credit = Decimal('0.00')
-
-        if end_date:
-            logger.debug(f"Calculating balances up to {end_date}")
 
         for account in accounts:
             balance = account.compute_balance(end_date=end_date)
