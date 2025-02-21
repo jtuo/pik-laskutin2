@@ -80,8 +80,8 @@ class Command(BaseCommand):
                 writer.writerow([
                     entry.id,
                     entry.date.strftime('%d.%m.%Y'),  # Format as DD.MM.YYYY
-                    "1422", # Hardcoded receivables account :)
-                    "Saamiset jäseniltä", # Hardcoded receivables account name :)
+                    Config.RECEIVABLES_LEDGER_ACCOUNT_ID,
+                    Config.LEDGER_ACCOUNT_MAP[Config.RECEIVABLES_LEDGER_ACCOUNT_ID],
                     amount if entry.amount > 0 else "",
                     amount if entry.amount < 0 else "",
                     f'Lentolasku, {entry.account.id}: {entry.description}'
