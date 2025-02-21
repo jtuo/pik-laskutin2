@@ -20,6 +20,8 @@ class Command(BaseCommand):
         parser.add_argument('--year', type=int, help='Year to export')
         parser.add_argument('--start-date', type=str, help='Start date (YYYY-MM-DD)')
         parser.add_argument('--end-date', type=str, help='End date (YYYY-MM-DD)')
+        parser.add_argument('--force', action='store_true', help='Export entries even if ledger account is missing')
+        parser.add_argument('--receivables-only', action='store_true', help='Export only receivables entries')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -59,14 +61,15 @@ class Command(BaseCommand):
             
             # Write entries
             for entry in entries:
-                if not entry.ledger_account_id:
+                if not entry.ledger_account_id and not options.get('force'):
                     logger.warning(f"Skipping entry {entry} with no ledger account")
                     continue
 
-                if entry.ledger_account_id not in Config.LEDGER_ACCOUNT_MAP:
+                if entry.ledger_account_id not in Config.LEDGER_ACCOUNT_MAP and not options.get('force'):
                     logger.error(f"Skipping entry {entry.id} with unknown ledger account {entry.ledger_account_id}")
                     logger.error(f"{entry}, {entry.description}")
                     logger.error(f"Please add ledger account {entry.ledger_account_id} to config.LEDGER_ACCOUNT_MAP")
+                    continue
                 
                 # Format amount as absolute value like: XX,XX
                 amount = f'{abs(entry.amount):.2f}'.replace('.', ',')
@@ -77,12 +80,15 @@ class Command(BaseCommand):
                 writer.writerow([
                     entry.id,
                     entry.date.strftime('%d.%m.%Y'),  # Format as DD.MM.YYYY
-                    "1422",
-                    "Saamiset jäseniltä",
+                    "1422", # Hardcoded receivables account :)
+                    "Saamiset jäseniltä", # Hardcoded receivables account name :)
                     amount if entry.amount > 0 else "",
                     amount if entry.amount < 0 else "",
                     f'Lentolasku, {entry.account.id}: {entry.description}'
                 ])
+
+                if options.get('receivables_only'):
+                    continue
 
                 # Second row - contra account
                 # For positive amounts: Debit 0, Credit entry.amount
