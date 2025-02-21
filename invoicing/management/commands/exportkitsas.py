@@ -7,6 +7,7 @@ from django.utils import timezone
 from zoneinfo import ZoneInfo
 from invoicing.models import Account, AccountEntry
 from invoicing.io.nda import NDAFileParser
+from operations.models import Flight
 from config import Config
 import glob
 import os
@@ -74,6 +75,10 @@ class Command(BaseCommand):
                 # Format amount as absolute value like: XX,XX
                 amount = f'{abs(entry.amount):.2f}'.replace('.', ',')
 
+                # Add additional description
+                prefix = "Lentolasku, " if isinstance(entry.event, Flight) else ""
+                description = f'{prefix}{entry.account.id}: {entry.description}'
+
                 # First row - receivables account
                 # For positive amounts: Debit entry.amount, Credit 0
                 # For negative amounts: Debit 0, Credit entry.amount
@@ -84,7 +89,7 @@ class Command(BaseCommand):
                     Config.LEDGER_ACCOUNT_MAP[Config.RECEIVABLES_LEDGER_ACCOUNT_ID],
                     amount if entry.amount > 0 else "",
                     amount if entry.amount < 0 else "",
-                    f'Lentolasku, {entry.account.id}: {entry.description}'
+                    description
                 ])
 
                 if options.get('receivables_only'):
@@ -101,7 +106,7 @@ class Command(BaseCommand):
                     if entry.ledger_account_id in Config.LEDGER_ACCOUNT_MAP else "",
                     amount if entry.amount < 0 else "",
                     amount if entry.amount > 0 else "",
-                    f'Lentolasku, {entry.account.id}: {entry.description}'
+                    description
                 ])
 
         logger.info(f"Exported {entries.count()} entries to {filename}")
