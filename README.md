@@ -5,10 +5,9 @@ Rewrite of the old invoicing software.
 
 ## Installation
 
-
 ```bash	
 # Install miniconda if not already installed
-conda create -n pik-laskutin python=3.10
+conda create -n pik-laskutin python=3.11
 conda activate pik-laskutin
 
 git clone https://github.com/jtuo/pik-laskutin2.git
@@ -17,7 +16,11 @@ pip install -r requirements.txt
 ```
 
 ## Running the application
+
 ```bash
+# If not already activated, activate the conda environment
+conda activate pik-laskutin
+
 # List available commands
 python manage.py
 
