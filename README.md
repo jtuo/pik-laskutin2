@@ -15,6 +15,15 @@ cd pik-laskutin2
 pip install -r requirements.txt
 ```
 
+## Configuration
+
+```bash
+# Copy the sample configuration file
+cp config.sample.py config.py
+```
+
+Edit `config.py` to set up the configuration.
+
 ## Running the application
 
 ```bash
