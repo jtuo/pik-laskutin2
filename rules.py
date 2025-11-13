@@ -11,19 +11,20 @@ from loguru import logger
 
 def make_rules():
     # Configuration
-    YEAR = 2024
+    YEAR = 2025
 
     ACCT_PURSI_KEIKKA = 3220
     ACCT_TOW = 3130
     ACCT_1037 = 3310
     ACCT_1037_OPEALE = 3310
+    ACCT_795 = 3310
     ACCT_TOWING = 3170
     ACCT_PURSI_INSTRUCTION = 3470
     ACCT_KALUSTO = 3010
     ACCT_LASKUTUSLISA = 3610
 
-    ID_PURSI_CAP_2024 = f"pursi_hintakatto_{YEAR}"
-    ID_KALUSTOMAKSU_CAP_2024 = f"kalustomaksu_hintakatto_{YEAR}"
+    ID_PURSI_CAP = f"pursi_hintakatto_{YEAR}"
+    ID_KALUSTOMAKSU_CAP = f"kalustomaksu_hintakatto_{YEAR}"
 
     # Kurssialennus
     from config import Config # Avoid circular import
@@ -41,6 +42,7 @@ def make_rules():
     F_DG = [AircraftFilter("OH-952")]
     F_TOW = [AircraftFilter("OH-TOW")]
     F_1037 = [AircraftFilter("OH-1037")]
+    F_795 = [AircraftFilter("OH-795")]
 
     OPEALE = [DiscountReasonFilter("opeale")]
 
@@ -54,30 +56,16 @@ def make_rules():
     rules = [
         # OH-TOW
         FirstRule([
-            # Nuorisoalennus + siirtohinaus
-            MinimumDurationRule(
-                FlightRule(Decimal('122') * Decimal('0.75'), ACCT_TOWING, 
-                          F_TOW + F_TRANSFER_TOW + F_YOUTH,
-                          "Siirtohinaus {aircraft}, {duration} min (nuorisoalennus 25%)"),
-                F_MOTTI, 15, "(minimilaskutus 15 min)"),
-            
-            # Nuorisoalennus
-            MinimumDurationRule(
-                FlightRule(122 * 0.75, ACCT_TOW,
-                          F_TOW + F_YOUTH,
-                          "Lento {aircraft}, {duration} min (nuorisoalennus 25%)"),
-                F_MOTTI, 15, "(minimilaskutus 15 min)"),
-            
             # Siirtohinaus
             MinimumDurationRule(
-                FlightRule(Decimal('122'), ACCT_TOWING,
+                FlightRule(Decimal('118'), ACCT_TOWING,
                           F_TOW + F_TRANSFER_TOW,
                           "Siirtohinaus {aircraft}, {duration} min"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)"),
             
             # Normaalilento
             MinimumDurationRule(
-                FlightRule(122, ACCT_TOW,
+                FlightRule(Decimal('118'), ACCT_TOW,
                           F_TOW,
                           "Lento {aircraft}, {duration} min"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)")
@@ -87,26 +75,34 @@ def make_rules():
         FirstRule([
             # OH-1037 opeale
             MinimumDurationRule(
-                FlightRule(Decimal('65'), ACCT_1037_OPEALE, F_1037 + OPEALE, "Lento {aircraft}, {duration} min (opealennus)"),
-                F_MOTTI, 15, "(minimilaskutus 15 min)"),
-
-            # Nuorisoalennus
-            MinimumDurationRule(
-                FlightRule(Decimal('113') * Decimal('0.75'), ACCT_1037,
-                          F_1037 + F_YOUTH,
-                          "Lento {aircraft}, {duration} min (nuorisoalennus 25%)"),
+                FlightRule(Decimal('70'), ACCT_1037_OPEALE, F_1037 + OPEALE, "Lento {aircraft}, {duration} min (opealennus)"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)"),
             
             # Normaalilento
             MinimumDurationRule(
-                FlightRule(Decimal('113'), ACCT_1037,
+                FlightRule(Decimal('112'), ACCT_1037,
                           F_1037,
                           "Lento {aircraft}, {duration} min"),
                 F_MOTTI, 15, "(minimilaskutus 15 min)")
         ]),
 
+        # OH-795
+        FirstRule([
+            # OH-795 opeale
+            #MinimumDurationRule(
+            #    FlightRule(Decimal('70'), ACCT_1037_OPEALE, F_1037 + OPEALE, "Lento {aircraft}, {duration} min (opealennus)"),
+            #    F_MOTTI, 15, "(minimilaskutus 15 min)"),
+            
+            # Normaalilento
+            MinimumDurationRule(
+                FlightRule(Decimal('112'), ACCT_795,
+                          F_795,
+                          "Lento {aircraft}, {duration} min"),
+                F_MOTTI, 15, "(minimilaskutus 15 min)")
+        ]),
+
         # Purtsikat
-        CappedRule(ID_PURSI_CAP_2024, Decimal('1250'),
+        CappedRule(ID_PURSI_CAP, Decimal('1250'),
         AllRules([
             # Purtsikat
             FirstRule([
@@ -145,7 +141,7 @@ def make_rules():
         FlightRule(lambda ev: Decimal('6'), ACCT_PURSI_INSTRUCTION, F_PURTSIKKA + [PurposeFilter("KOU")], "Koululentomaksu {aircraft}"),
 
         # Kalustomaksu
-        CappedRule(ID_KALUSTOMAKSU_CAP_2024, Decimal('90'),
+        CappedRule(ID_KALUSTOMAKSU_CAP, Decimal('90'),
                    AllRules([FlightRule(Decimal('10'), ACCT_KALUSTO, F_PURTSIKKA,
                                     "Kalustomaksu {aircraft}, {duration} min"),
                             FlightRule(Decimal('10'), ACCT_KALUSTO, F_MOTTI,
