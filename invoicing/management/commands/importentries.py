@@ -94,4 +94,5 @@ class Command(BaseCommand):
 
         if failed:
             if not options['force']:
+                transaction.set_rollback(True)
                 logger.error(f"Rolling back transaction due to {failed} failed entries")
