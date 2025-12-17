@@ -166,8 +166,9 @@ class Command(BaseCommand):
 
         except Exception as e:
             logger.exception(f"Error creating invoices: {str(e)}")
+            logger.error("Rolling back transaction")
             if self.options.get('delete_drafts'):
-                logger.error("Rolling back transaction and restoring draft invoices")
+                logger.error("Draft invoices will be restored by transaction rollback")
             raise
     
     def export_to_file(self, invoice, output_dir):
