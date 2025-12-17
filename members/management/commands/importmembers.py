@@ -11,12 +11,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('path', type=str, help='path of the .csv file(s)')
+        parser.add_argument('--force', action='store_true', help='Force import even if some entries fail')
 
+    @transaction.atomic
     def handle(self, *args, **options):
         filename = options['path']
         logger.debug(f"Importing members from {filename}")
         count = 0
         skipped = 0
+        failed = 0
         accounts_created = 0
 
         with open(filename, 'r', encoding='utf-8') as csvfile:
@@ -26,67 +29,69 @@ class Command(BaseCommand):
             if missing_columns:
                 raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
 
-            with transaction.atomic():  # Wrap the whole import in a transaction
-                for row in reader:
-                    try:
-                    
-                        # Check if member already exists
-                        # This checks for the PIK-viite field only
-                        member, member_created = Member.objects.get_or_create(
-                            id=row['PIK-viite'],
-                            defaults={
-                                'first_name': row['Etunimi'],
-                                'last_name': row['Sukunimi'],
-                                'email': row.get('Sähköposti'),
-                                'birth_date': None  # We'll set this later if provided
-                            }
-                        )
+            for row in reader:
+                try:
+                    # Check if member already exists
+                    # This checks for the PIK-viite field only
+                    member, member_created = Member.objects.get_or_create(
+                        id=row['PIK-viite'],
+                        defaults={
+                            'first_name': row['Etunimi'],
+                            'last_name': row['Sukunimi'],
+                            'email': row.get('Sähköposti'),
+                            'birth_date': None  # We'll set this later if provided
+                        }
+                    )
 
-                        if member_created:
-                            # Parse birth date if provided
-                            if row.get('Syntynyt'):
+                    if member_created:
+                        # Parse birth date if provided
+                        if row.get('Syntynyt'):
+                            try:
+                                # Try Finnish format first (DD.MM.YYYY)
+                                birth_date = datetime.strptime(row['Syntynyt'], '%d.%m.%Y').date()
+                            except ValueError:
                                 try:
-                                    # Try Finnish format first (DD.MM.YYYY)
-                                    birth_date = datetime.strptime(row['Syntynyt'], '%d.%m.%Y').date()
-                                except ValueError:
-                                    try:
-                                        # Fall back to ISO format (YYYY-MM-DD)
-                                        birth_date = datetime.strptime(row['Syntynyt'], '%Y-%m-%d').date()
-                                    except ValueError as e:
-                                        raise ValueError(
-                                            f"Invalid birth date format: {row['Syntynyt']}. "
-                                            "Use DD.MM.YYYY or YYYY-MM-DD"
-                                        )
-                                member.birth_date = birth_date
-                                member.save()
+                                    # Fall back to ISO format (YYYY-MM-DD)
+                                    birth_date = datetime.strptime(row['Syntynyt'], '%Y-%m-%d').date()
+                                except ValueError as e:
+                                    raise ValueError(
+                                        f"Invalid birth date format: {row['Syntynyt']}. "
+                                        "Use DD.MM.YYYY or YYYY-MM-DD"
+                                    )
+                            member.birth_date = birth_date
+                            member.save()
 
-                            count += 1
-                        else:
-                            skipped += 1
+                        count += 1
+                    else:
+                        skipped += 1
 
-                        # Create account if it doesn't exist
-                        account, account_created = Account.objects.get_or_create(
-                            id=row['PIK-viite'],  # Using same ID as member
-                            defaults={
-                                'member': member,
-                                'name': f"{row['Etunimi']} {row['Sukunimi']}"
-                            }
-                        )
+                    # Create account if it doesn't exist
+                    account, account_created = Account.objects.get_or_create(
+                        id=row['PIK-viite'],  # Using same ID as member
+                        defaults={
+                            'member': member,
+                            'name': f"{row['Etunimi']} {row['Sukunimi']}"
+                        }
+                    )
 
+                    if account_created:
+                        accounts_created += 1
+
+                    if member_created or account_created:
+                        status = []
+                        if member_created:
+                            status.append("Added new member")
                         if account_created:
-                            accounts_created += 1
-                            
-                        if member_created or account_created:
-                            status = []
-                            if member_created:
-                                status.append("Added new member")
-                            if account_created:
-                                status.append("Created new account")
-                            logger.info(f"{' & '.join(status)} for {member.name} (ID: {row['PIK-viite']})")
+                            status.append("Created new account")
+                        logger.info(f"{' & '.join(status)} for {member.name} (ID: {row['PIK-viite']})")
 
-                    except Exception as e:
-                        error_msg = f"Error in row {reader.line_num}: {str(e)}"
-                        logger.error(error_msg)
-                        raise ValueError(error_msg)
+                except Exception as e:
+                    error_msg = f"Error in row {reader.line_num}: {str(e)}"
+                    logger.error(error_msg)
+                    failed += 1
 
-        logger.info(f'Processed {count + skipped} members: {count} new, {skipped} existing, {accounts_created} new accounts created')
+        logger.info(f'Member import completed. Imported: {count}, Skipped: {skipped}, Failed: {failed}, Accounts created: {accounts_created}')
+
+        if failed and not options['force']:
+            transaction.set_rollback(True)
+            logger.error(f"Rolling back transaction due to {failed} failed entries")
