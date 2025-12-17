@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from invoicing.models import Account, AccountEntry
 from django.utils import timezone
+from config import Config
 
 class Command(BaseCommand):
     help = 'Import account entries from a CSV file'
@@ -58,13 +59,23 @@ class Command(BaseCommand):
                         except (ValueError, decimal_InvalidOperation):
                             raise ValueError(f"Invalid amount format: {row['Summa']}")
                         
+                        # Ensure that ledger account ID is correct
+                        ledger_account_id = (row['Tili'] or '').strip()
+                        if not ledger_account_id:
+                            raise ValueError("Missing ledger account ID (Tili)")
+
+                        if ledger_account_id not in Config.LEDGER_ACCOUNT_MAP:
+                            raise ValueError(
+                                f"Ledger account ID {ledger_account_id} not found in Config.LEDGER_ACCOUNT_MAP"
+                            )
+
                         # Check for duplicates
                         if AccountEntry.objects.filter(
                             account=account,
                             date=date,
                             amount=amount,
                             description=row['Selite'],
-                            ledger_account_id=row['Tili']
+                            ledger_account_id=ledger_account_id
                         ).exists():
                             duplicates += 1
                             if not options['force_duplicates']:
@@ -77,7 +88,7 @@ class Command(BaseCommand):
                             date=date,
                             amount=amount,
                             description=row['Selite'],
-                            ledger_account_id=row['Tili']
+                            ledger_account_id=ledger_account_id
                         )
                         count += 1
 
