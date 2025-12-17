@@ -182,7 +182,7 @@ class Command(BaseCommand):
                             f"  Calculated duration (landing - takeoff): {actual_duration} minutes\n"
                             f"  Reported duration: {duration} minutes"
                         )
-                        if not options['force']:
+                        if not options['force'] and not options['allow_duration_mismatch']:
                             raise ValueError(msg)
                         else:
                             logger.warning(msg)
