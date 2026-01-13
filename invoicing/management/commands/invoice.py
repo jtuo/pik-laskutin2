@@ -278,11 +278,18 @@ class Command(BaseCommand):
                 )
 
                 # Collect entries that contribute to the current balance
+                # For negative balances (customer has credit), go back one extra zero balance
+                # to provide context for how the credit was created (e.g., double payment)
                 entries = []
+                zeros_seen = 0
+                zeros_to_skip = 1 if balance < 0 else 0
+
                 for balance_entry in reversed(balance_entries):
                     # Stop at zero balance unless --include-all-entries is set
                     if balance_entry.balance == 0 and not options['include_all_entries']:
-                        break
+                        if zeros_seen >= zeros_to_skip:
+                            break
+                        zeros_seen += 1
                     entries.append(balance_entry.entry)
 
                     # Stop if the entry is not additive
