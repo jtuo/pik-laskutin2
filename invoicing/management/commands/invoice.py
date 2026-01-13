@@ -42,6 +42,8 @@ class Command(BaseCommand):
                           help='Export invoices to text files')
         parser.add_argument('--dry-run', action='store_true',
                           help='Preview changes without saving to database')
+        parser.add_argument('--include-all-entries', action='store_true',
+                          help='Include all entries that affect the balance, not just since last zero balance')
 
     def parse_date(self, date_str):
         """Parse a date string in YYYY-MM-DD format."""
@@ -275,15 +277,16 @@ class Command(BaseCommand):
                     due_date=timezone.now() + timedelta(days=14)
                 )
 
-                # Collect entries since the last zero balance
+                # Collect entries that contribute to the current balance
                 entries = []
                 for balance_entry in reversed(balance_entries):
-                    if balance_entry.balance == 0:
+                    # Stop at zero balance unless --include-all-entries is set
+                    if balance_entry.balance == 0 and not options['include_all_entries']:
                         break
                     entries.append(balance_entry.entry)
 
                     # Stop if the entry is not additive
-                    # This is because "non-additive" entries SET the balance to a specific value 
+                    # This is because "non-additive" entries SET the balance to a specific value
                     # Because of this, earlier entries should not be included in the invoice
                     # Otherwise, they contribute to the total of the invoice, which is incorrect
                     # It is a bit questionable if we want to even have such entries in the system
