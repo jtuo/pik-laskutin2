@@ -34,13 +34,30 @@ class Command(BaseCommand):
             accounts = []
         
         if not accounts:
-            raise ValueError('No accounts to send invoices for')
+            logger.error('No account(s) chosen for invoicing')
+            raise ValueError('No accounts to send invoices for (perhaps use --all-accounts?)')
 
         # Find all invoices that are in DRAFT status for the selected accounts
         invoices = list(Invoice.objects.filter(account__in=accounts, status=Invoice.Status.DRAFT))
 
         if not invoices:
             raise ValueError('No invoices to send')
+
+        # Check for accounts with multiple draft invoices
+        account_draft_counts = {}
+        for invoice in invoices:
+            account_id = invoice.account.id
+            account_draft_counts[account_id] = account_draft_counts.get(account_id, 0) + 1
+
+        duplicates = {k: v for k, v in account_draft_counts.items() if v > 1}
+        if duplicates:
+            logger.error("Found accounts with multiple draft invoices:")
+            for account_id, count in duplicates.items():
+                logger.error(f"  - Account {account_id}: {count} drafts")
+            raise ValueError(
+                f"Cannot send invoices: {len(duplicates)} account(s) have multiple drafts. "
+                "Please resolve duplicates before sending."
+            )
 
         # Load the service account credentials
         credentials = service_account.Credentials.from_service_account_file(
