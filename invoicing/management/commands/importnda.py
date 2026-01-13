@@ -61,16 +61,26 @@ class Command(BaseCommand):
                         try:
                             # Apply filters
                             if not (txn.iban in account_numbers and
-                                    txn.cents > 0 and  # Only positive amounts
-                                    txn.reference and  # Must have reference number
-                                    len(txn.reference) in (4,6)):  # Valid reference number length
+                                    txn.cents > 0):  # Only positive amounts
                                 continue
-                        
-                            # Find account by reference number
-                            try:
-                                account = Account.objects.get(id=str(txn.reference))
-                            except Account.DoesNotExist:
-                                raise ValueError(f"Account with reference ID {txn.reference} not found")
+
+                            # Find account by reference number, with message as fallback if no reference
+                            account = None
+
+                            if txn.reference and len(txn.reference.strip()) in (4, 6):
+                                try:
+                                    account = Account.objects.get(id=txn.reference.strip())
+                                except Account.DoesNotExist:
+                                    raise ValueError(f"Account with reference '{txn.reference}' not found")
+                            elif txn.message and len(txn.message.strip()) in (4, 6):
+                                try:
+                                    account = Account.objects.get(id=txn.message.strip())
+                                    logger.warning(f"Account found via message field '{txn.message.strip()}' (no reference provided)")
+                                except Account.DoesNotExist:
+                                    pass
+
+                            if account is None:
+                                continue
 
                             # Convert cents to decimal amount
                             amount = -txn.amount_decimal  # Using the new property
