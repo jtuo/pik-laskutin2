@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils import timezone
 from django.utils.html import format_html
 from .models import Aircraft, Flight
 from invoicing.logic.engine import create_default_engine
@@ -62,10 +63,12 @@ class FlightAdmin(admin.ModelAdmin):
 
     def flight_times(self, obj):
         """Format takeoff and landing times nicely"""
+        takeoff = timezone.localtime(obj.takeoff_time)
+        landing = timezone.localtime(obj.landing_time)
         return format_html(
             '{} → {}',
-            obj.takeoff_time.strftime('%H:%M'),
-            obj.landing_time.strftime('%H:%M')
+            takeoff.strftime('%H:%M'),
+            landing.strftime('%H:%M')
         )
     flight_times.short_description = 'Flight Times'
 
