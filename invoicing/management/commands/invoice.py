@@ -23,11 +23,11 @@ class Command(BaseCommand):
         parser.add_argument('--account', type=str,
                           help='Only process this specific account')
         parser.add_argument('--year', type=int,
-                          help='Include entries from this year')
+                          help='Invoice accounts with activity from this year')
         parser.add_argument('--period-start', type=str,
-                          help='Include entries from this date onwards (YYYY-MM-DD)')
+                          help='Invoice accounts with activity from this date onwards (YYYY-MM-DD)')
         parser.add_argument('--period-end', type=str,
-                          help='Include entries until this date (YYYY-MM-DD)')
+                          help='Invoice accounts with activity until this date (YYYY-MM-DD)')
         parser.add_argument('--include-zero-balance', action='store_true',
                           help='Also send invoices for zero-balance accounts')
         parser.add_argument('--invoice-everyone', action='store_true',
