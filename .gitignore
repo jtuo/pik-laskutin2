@@ -1,6 +1,7 @@
 # Config
 config.py
-.json
+*.json
+*.csv
 
 # Databases
 *.db
