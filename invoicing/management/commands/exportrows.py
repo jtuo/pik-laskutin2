@@ -21,6 +21,7 @@ class Command(BaseCommand):
         parser.add_argument('--start-date', type=str, help='Start date (YYYY-MM-DD)')
         parser.add_argument('--end-date', type=str, help='End date (YYYY-MM-DD)')
         parser.add_argument('--positive-only', action='store_true', help='Export only positive amounts (debts)')
+        parser.add_argument('--account', type=str, help='Export only entries for a specific account ID')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -52,6 +53,8 @@ class Command(BaseCommand):
             entries = entries.filter(date__lte=datetime.strptime(options['end_date'], '%Y-%m-%d').date())
         if options.get('positive_only'):
             entries = entries.filter(amount__gt=0)
+        if options.get('account'):
+            entries = entries.filter(account_id=options['account'])
         
         # Create directory if it doesn't exist and filename has a directory part
         dirname = os.path.dirname(filename)
